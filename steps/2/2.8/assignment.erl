@@ -1,4 +1,5 @@
 -module(assignment).
+-author("@sgobotta").
 -export([
   area/1, test_area/0,
   perimeter/1, test_perimeter/0,
