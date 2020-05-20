@@ -62,11 +62,13 @@ index(Xs) ->
     MergedIndexedWords.
 
 test_index() ->
-    % index(get_file_contents("dickens-christmas.txt")).
-    index(get_file_contents("gettysburg-address.txt")).
+    index(get_file_contents("dickens-christmas.txt")).
+    % index(get_file_contents("gettysburg-address.txt")). %3'20''  :(
 
 %% Helpers
 
+%% @doc Given a list of word-index tuples, returns a word-index tuple list where
+%% their indexes, representing line appearance are flattened by word.
 merge_words_indexes(Xs) -> merge_words_indexes(Xs, []).
 
 merge_words_indexes([], Accumulator) -> Accumulator;
@@ -74,8 +76,25 @@ merge_words_indexes([{Word, Index}|Xs], Accumulator) ->
     {Occurrences, FilteredList} = take_occurrences(Word, Xs, {[],[]}),
     merge_words_indexes(
         FilteredList,
-        Accumulator ++ [{Word, [Index | merge_occurrences(Occurrences)]}]
+        Accumulator ++ [{Word, nogaps([Index | merge_occurrences(Occurrences)], Index, [])}]
     ).
+
+%% @doc Given a list of numbers representing text lines of a word appeance,
+%% merges neighbour numbers to return a list of tuples where the first
+%% component is the ealiest appearance of the word and the second component
+%% is where the word was last seen before line gaps.
+nogaps([], _Index, Accumulator) -> Accumulator;
+nogaps([X], _Index, Accumulator) -> Accumulator ++ [{X,X}];
+nogaps([X|[Y|[]]], FirstAppearance, Accumulator) ->
+    case (X+1) == Y of
+        true  -> Accumulator ++ [{FirstAppearance, Y}];
+        false -> Accumulator ++ [{FirstAppearance, X}, {Y,Y}]
+    end;
+nogaps([X|[Y|Xs]], FirstAppearance, Accumulator) ->
+    case (X+1) == Y of
+        true  -> nogaps([Y|Xs], FirstAppearance, Accumulator);
+        false -> nogaps([Y|Xs], Y, Accumulator ++ [{FirstAppearance, X}])
+    end.
 
 %% @doc Given a list of word-index tuples, extracts it's index to return
 %% a list of indexes.
@@ -92,15 +111,16 @@ take_occurrences(Word, [{Word, _Index} = WordIndex|Xs], {Occurrences, Remaining}
 take_occurrences(Word, [{_AnotherWord, _Index} = WordIndex|Xs], {Occurrences, Remaining}) ->
     take_occurrences(Word, Xs, {Occurrences, Remaining ++ [WordIndex]}).
 
-%% @doc Given a list of text lines returns a list where each element is a list
-%% of tuples, representing a word and the number of line each word belongs to.
-index_lines(Xs) -> index_lines(Xs, [], 1).
+%% @doc Given a list of list of words returns a list where each element is a
+%% list of tuples, representing a word and the number of line each word belongs
+%% to.
+index_lines(Xss) -> index_lines(Xss, [], 1).
 
 %% @doc Given a list of lists of words, an accumulator and an index, indexes
 %% each line element to it's corresponding line number.
 index_lines([], Accumulator, _Index) -> Accumulator;
-index_lines([X|Xs], Accumulator, Index) ->
-    index_lines(Xs, Accumulator ++ [index_line(X, Index)], Index + 1).
+index_lines([Xs|Xss], Accumulator, Index) ->
+    index_lines(Xss, Accumulator ++ [index_line(Xs, Index)], Index + 1).
 
 %% @doc Given a list of words and an index, returns a tuple where the first
 %% component is the word, and the second the given index.
