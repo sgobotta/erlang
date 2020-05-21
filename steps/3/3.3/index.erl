@@ -51,7 +51,7 @@ show_file_contents([L|Ls]) ->
 %% 7. remove short words
 
 %% @doc given a list of strings, indexes every word with it's occurrences.
--spec main([T]) -> [T].
+-spec main([string()]) -> [string()].
 main([]) -> [];
 main(Xs) ->
     NormalisedList = lists:map(fun (X) -> nocaps(nopunct(X)) end, Xs),
@@ -73,37 +73,43 @@ test_main() ->
 
 %% Helpers
 
-%% @doc Given a list of word-index tuples, returns a word-index tuple list where
-%% their indexes represent their line appearances.
+%% @doc Given a list of word-index tuples and a word-index tuple accumulator,
+%% returns a word-index tuple list where their indexes represent their line
+%% appearances.
+-spec merge_words_indexes([{string(), integer()}]) -> [{string(), [integer()]}].
 merge_words_indexes(Xs) -> merge_words_indexes(Xs, []).
 
+-spec merge_words_indexes([{string(), integer()}], [{string(), [integer()]}]) -> [{string(), [integer()]}].
 merge_words_indexes([], Accumulator) -> Accumulator;
 merge_words_indexes([{Word, Index}|Xs], Accumulator) ->
     {Occurrences, FilteredList} = take_occurrences(Word, Xs, {[],[]}),
     merge_words_indexes(
         FilteredList,
-        Accumulator ++ [{Word, nogaps([Index | merge_occurrences(Occurrences)], Index, [])}]
+        Accumulator ++ [{Word, index_line_occurrences([Index | merge_occurrences(Occurrences)], Index, [])}]
     ).
 
-%% @doc Given a list of numbers representing text lines of a word appeance,
-%% merges neighbour numbers to return a list of tuples where the first
-%% component is the ealiest appearance of the word and the second component
-%% is where the word was last seen before line gaps.
-nogaps([], _Index, Accumulator) -> Accumulator;
-nogaps([X], _Index, Accumulator) -> Accumulator ++ [{X,X}];
-nogaps([X|[Y|[]]], FirstAppearance, Accumulator) ->
+%% @doc Given a list of numbers representing text lines of a word appeance, an
+%% initial line number and an accumulator, merges neighbour numbers to return a
+%% list of tuples where the first component is the earliest line appearance of
+%% the word and the second component is the line where the word was last seen
+%% before the next line gap.
+-spec index_line_occurrences([integer()], integer(), [{integer(), integer()}]) -> [{integer(), integer()}].
+index_line_occurrences([], _Index, Accumulator) -> Accumulator;
+index_line_occurrences([X], _Index, Accumulator) -> Accumulator ++ [{X,X}];
+index_line_occurrences([X|[Y|[]]], FirstAppearance, Accumulator) ->
     case (X+1) == Y of
         true  -> Accumulator ++ [{FirstAppearance, Y}];
         false -> Accumulator ++ [{FirstAppearance, X}, {Y,Y}]
     end;
-nogaps([X|[Y|Xs]], FirstAppearance, Accumulator) ->
+index_line_occurrences([X|[Y|Xs]], FirstAppearance, Accumulator) ->
     case (X+1) == Y of
-        true  -> nogaps([Y|Xs], FirstAppearance, Accumulator);
-        false -> nogaps([Y|Xs], Y, Accumulator ++ [{FirstAppearance, X}])
+        true  -> index_line_occurrences([Y|Xs], FirstAppearance, Accumulator);
+        false -> index_line_occurrences([Y|Xs], Y, Accumulator ++ [{FirstAppearance, X}])
     end.
 
 %% @doc Given a list of word-index tuples, extracts it's index to return
 %% a list of indexes.
+-spec merge_occurrences([{string(), integer()}]) -> [integer()].
 merge_occurrences([]) -> [];
 merge_occurrences([{_Word, Index}|Xs]) -> [Index | merge_occurrences(Xs)].
 
@@ -111,7 +117,7 @@ merge_occurrences([{_Word, Index}|Xs]) -> [Index | merge_occurrences(Xs)].
 %% returns a tuple where the first component is the occurrences list of the
 %% word, and the second component the rest of the word-index tuples that don't
 %% match the given word.
-% take_occurrences(string(), [{string(), integer()}], {[{string(), integer()}]})
+-spec take_occurrences(string(), [{string(), [{string(), integer()}]}], {[{string(), integer()}], [{string(), integer()}]}) -> {[{string(), integer()}], [{string(), integer()}]}.
 take_occurrences(_X, [], Accumulator) -> Accumulator;
 take_occurrences(Word, [{Word, _Index} = WordIndex|Xs], {Occurrences, Remaining}) ->
     take_occurrences(Word, Xs, {Occurrences ++ [WordIndex], Remaining});
