@@ -2,7 +2,7 @@
 -export([
     get_file_contents/1,show_file_contents/1,
     nopunct/1,
-    index/1, test_index/0,
+    main/1, test_main/0,
     test_contains/0, test_nub/0
 ]).
 
@@ -35,12 +35,12 @@ get_all_lines(File,Partial) ->
 % Can be used to check the results of calling get_file_contents.
 
 show_file_contents([L|Ls]) ->
-    io:format("~s~n",[L]),
+    io:format("~p~n",[L]),
     show_file_contents(Ls);
  show_file_contents([]) ->
     ok.    
      
-
+%% Notes, possible steps to take:
 %% 0. identify a word
 %% 1. map every word with it's page
 %% 2. merge word coincidences with it's ine
@@ -51,24 +51,30 @@ show_file_contents([L|Ls]) ->
 %% 7. remove short words
 
 %% @doc given a list of strings, indexes every word with it's occurrences.
--spec index([T]) -> [T].
-index([]) -> [];
-index(Xs) ->
+-spec main([T]) -> [T].
+main([]) -> [];
+main(Xs) ->
     NormalisedList = lists:map(fun (X) -> nocaps(nopunct(X)) end, Xs),
-    WordsByLine = lists:map(fun (X) -> nub(identify_words(X)) end, NormalisedList),
-    IndexedWordsByLine = index_lines(WordsByLine),
+    WordsByLine = lists:map(
+        fun (X) ->
+            remove_short_words(nub(identify_words(X)))
+        end,
+        NormalisedList
+    ),
+    IndexedWordsByLine = index_line_words(WordsByLine),
     FlattenedIndexedWords = lists:flatten(IndexedWordsByLine),
     MergedIndexedWords = merge_words_indexes(FlattenedIndexedWords),
-    MergedIndexedWords.
+    show_file_contents(MergedIndexedWords).
 
-test_index() ->
-    index(get_file_contents("dickens-christmas.txt")).
-    % index(get_file_contents("gettysburg-address.txt")). %3'20''  :(
+test_main() ->
+    % takes 2'50'' to complete :(
+    % main(get_file_contents("dickens-christmas.txt")).
+    main(get_file_contents("gettysburg-address.txt")).
 
 %% Helpers
 
 %% @doc Given a list of word-index tuples, returns a word-index tuple list where
-%% their indexes, representing line appearance are flattened by word.
+%% their indexes represent their line appearances.
 merge_words_indexes(Xs) -> merge_words_indexes(Xs, []).
 
 merge_words_indexes([], Accumulator) -> Accumulator;
@@ -105,6 +111,7 @@ merge_occurrences([{_Word, Index}|Xs]) -> [Index | merge_occurrences(Xs)].
 %% returns a tuple where the first component is the occurrences list of the
 %% word, and the second component the rest of the word-index tuples that don't
 %% match the given word.
+% take_occurrences(string(), [{string(), integer()}], {[{string(), integer()}]})
 take_occurrences(_X, [], Accumulator) -> Accumulator;
 take_occurrences(Word, [{Word, _Index} = WordIndex|Xs], {Occurrences, Remaining}) ->
     take_occurrences(Word, Xs, {Occurrences ++ [WordIndex], Remaining});
@@ -114,24 +121,38 @@ take_occurrences(Word, [{_AnotherWord, _Index} = WordIndex|Xs], {Occurrences, Re
 %% @doc Given a list of list of words returns a list where each element is a
 %% list of tuples, representing a word and the number of line each word belongs
 %% to.
-index_lines(Xss) -> index_lines(Xss, [], 1).
+-spec index_line_words([[string()]]) -> [{string(), integer()}].
+index_line_words(Xss) -> index_line_words(Xss, [], 1).
 
 %% @doc Given a list of lists of words, an accumulator and an index, indexes
 %% each line element to it's corresponding line number.
-index_lines([], Accumulator, _Index) -> Accumulator;
-index_lines([Xs|Xss], Accumulator, Index) ->
-    index_lines(Xss, Accumulator ++ [index_line(Xs, Index)], Index + 1).
+-spec index_line_words([[string()]], [{string(), integer()}], integer()) -> [{string(), integer()}].
+index_line_words([], Accumulator, _Index) -> Accumulator;
+index_line_words([Xs|Xss], Accumulator, Index) ->
+    index_line_words(Xss, Accumulator ++ [index_line_word(Xs, Index)], Index + 1).
 
-%% @doc Given a list of words and an index, returns a tuple where the first
-%% component is the word, and the second the given index.
-index_line([], _Index) -> [];
-index_line([X|Xs], Index) -> [{X, Index} | index_line(Xs, Index)].
+%% @doc Given a list of words and an index, returns a list of tuples where the
+%% first component is the word, and the second the given index.
+-spec index_line_word([string()], integer()) -> [{string(), integer()}].
+index_line_word([], _Index) -> [];
+index_line_word([X|Xs], Index) -> [{X, Index} | index_line_word(Xs, Index)].
 
 %% @doc Given a string, identifies words to return a list of words
--spec identify_words([Char]) -> [[Char]].
+-spec identify_words(string()) -> [string()].
 identify_words(String) -> string:tokens(String, [$\s]).
 
-%% @doc given a string removes specials characters
+%% @doc Given an array of string, returns a new array with no words of length
+%% less than three (3).
+-spec remove_short_words([string()]) -> [string()].
+remove_short_words([]) -> [];
+remove_short_words([Word | Words]) ->
+    case (length(Word) < 3) of
+        true  -> remove_short_words(Words);
+        false -> [Word | remove_short_words(Words)]
+    end.
+
+%% @doc given a string removes special characters.
+-spec nopunct(string()) -> string().
 nopunct([]) ->
     [];
 nopunct([X|Xs]) ->
@@ -143,6 +164,7 @@ nopunct([X|Xs]) ->
     end.
 
 % @doc Given a string, removes capital letters.
+-spec nocaps(string()) -> string().
 nocaps([]) ->
     [];
 nocaps([X|Xs]) ->
@@ -158,6 +180,7 @@ nocap(X) ->
 
 %% @doc Given an element and a list tells whether the element exists in the list
 %% or not.
+-spec contains(A, [A]) -> boolean().
 contains(_E, []) -> false;
 contains(E, [E|_Xs]) -> true;
 contains(E, [_X|Xs]) -> contains(E, Xs).
@@ -174,6 +197,7 @@ test_contains() ->
   {passed, "contains tests passed succesfully."}.
 
 %% @doc Given a list returns a new list without duplicates.
+-spec nub([A]) -> [A].
 nub([]) -> [];
 nub([X|Xs]) ->
   case contains(X, Xs) of
