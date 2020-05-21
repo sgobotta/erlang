@@ -50,8 +50,16 @@ show_file_contents([L|Ls]) ->
 %% 6. remove special characters
 %% 7. remove short words
 
+-type text_line() :: string().
+-type word() :: string().
+%% @doc Represents the number of the line.
+-type line() :: integer().
+%% @doc Represents a word and the line it has been found.
+-type word_line() :: {word(), line()}.
+%% @doc Represents a word and the indexes lines where the word appears.
+-type word_lines() :: {word(), [{line(), line()}]}.
+
 %% @doc given a list of strings, indexes every word with it's occurrences.
--spec main([string()]) -> [string()].
 main([]) -> [];
 main(Xs) ->
     NormalisedList = lists:map(fun (X) -> nocaps(nopunct(X)) end, Xs),
@@ -76,10 +84,10 @@ test_main() ->
 %% @doc Given a list of word-index tuples and a word-index tuple accumulator,
 %% returns a word-index tuple list where their indexes represent their line
 %% appearances.
--spec merge_words_indexes([{string(), integer()}]) -> [{string(), [integer()]}].
+-spec merge_words_indexes([word_line()]) -> [word_lines()].
 merge_words_indexes(Xs) -> merge_words_indexes(Xs, []).
 
--spec merge_words_indexes([{string(), integer()}], [{string(), [integer()]}]) -> [{string(), [integer()]}].
+-spec merge_words_indexes([word_line()], [word_lines()]) -> [word_lines()].
 merge_words_indexes([], Accumulator) -> Accumulator;
 merge_words_indexes([{Word, Index}|Xs], Accumulator) ->
     {Occurrences, FilteredList} = take_occurrences(Word, Xs, {[],[]}),
@@ -88,12 +96,12 @@ merge_words_indexes([{Word, Index}|Xs], Accumulator) ->
         Accumulator ++ [{Word, index_line_occurrences([Index | merge_occurrences(Occurrences)], Index, [])}]
     ).
 
-%% @doc Given a list of numbers representing text lines of a word appeance, an
+%% @doc Given a list of numbers representing the lines of a word appeance, an
 %% initial line number and an accumulator, merges neighbour numbers to return a
 %% list of tuples where the first component is the earliest line appearance of
 %% the word and the second component is the line where the word was last seen
 %% before the next line gap.
--spec index_line_occurrences([integer()], integer(), [{integer(), integer()}]) -> [{integer(), integer()}].
+-spec index_line_occurrences([line()], line(), [{line(), line()}]) -> [{line(), line()}].
 index_line_occurrences([], _Index, Accumulator) -> Accumulator;
 index_line_occurrences([X], _Index, Accumulator) -> Accumulator ++ [{X,X}];
 index_line_occurrences([X|[Y|[]]], FirstAppearance, Accumulator) ->
@@ -109,7 +117,7 @@ index_line_occurrences([X|[Y|Xs]], FirstAppearance, Accumulator) ->
 
 %% @doc Given a list of word-index tuples, extracts it's index to return
 %% a list of indexes.
--spec merge_occurrences([{string(), integer()}]) -> [integer()].
+-spec merge_occurrences([{word(), line()}]) -> [line()].
 merge_occurrences([]) -> [];
 merge_occurrences([{_Word, Index}|Xs]) -> [Index | merge_occurrences(Xs)].
 
@@ -117,7 +125,7 @@ merge_occurrences([{_Word, Index}|Xs]) -> [Index | merge_occurrences(Xs)].
 %% returns a tuple where the first component is the occurrences list of the
 %% word, and the second component the rest of the word-index tuples that don't
 %% match the given word.
--spec take_occurrences(string(), [{string(), [{string(), integer()}]}], {[{string(), integer()}], [{string(), integer()}]}) -> {[{string(), integer()}], [{string(), integer()}]}.
+-spec take_occurrences(word(), [{word(), [word_line()]}], {[word_line()], [word_line()]}) -> {[word_line()], [word_line()]}.
 take_occurrences(_X, [], Accumulator) -> Accumulator;
 take_occurrences(Word, [{Word, _Index} = WordIndex|Xs], {Occurrences, Remaining}) ->
     take_occurrences(Word, Xs, {Occurrences ++ [WordIndex], Remaining});
@@ -127,24 +135,24 @@ take_occurrences(Word, [{_AnotherWord, _Index} = WordIndex|Xs], {Occurrences, Re
 %% @doc Given a list of list of words returns a list where each element is a
 %% list of tuples, representing a word and the number of line each word belongs
 %% to.
--spec index_line_words([[string()]]) -> [{string(), integer()}].
+-spec index_line_words([[word()]]) -> [word_line()].
 index_line_words(Xss) -> index_line_words(Xss, [], 1).
 
 %% @doc Given a list of lists of words, an accumulator and an index, indexes
 %% each line element to it's corresponding line number.
--spec index_line_words([[string()]], [{string(), integer()}], integer()) -> [{string(), integer()}].
+-spec index_line_words([[word()]], [word_line()], line()) -> [word_line()].
 index_line_words([], Accumulator, _Index) -> Accumulator;
 index_line_words([Xs|Xss], Accumulator, Index) ->
     index_line_words(Xss, Accumulator ++ [index_line_word(Xs, Index)], Index + 1).
 
 %% @doc Given a list of words and an index, returns a list of tuples where the
 %% first component is the word, and the second the given index.
--spec index_line_word([string()], integer()) -> [{string(), integer()}].
+-spec index_line_word([word()], line()) -> [word_line()].
 index_line_word([], _Index) -> [];
 index_line_word([X|Xs], Index) -> [{X, Index} | index_line_word(Xs, Index)].
 
 %% @doc Given a string, identifies words to return a list of words
--spec identify_words(string()) -> [string()].
+-spec identify_words(text_line()) -> [word()].
 identify_words(String) -> string:tokens(String, [$\s]).
 
 %% @doc Given an array of string, returns a new array with no words of length
