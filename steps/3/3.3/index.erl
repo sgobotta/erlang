@@ -1,7 +1,6 @@
 -module(index).
 -export([
-    get_file_contents/1,show_file_contents/1,
-    nopunct/1,
+    get_file_contents/1, show_file_contents/1,
     main/1, test_main/0,
     test_contains/0, test_nub/0
 ]).
