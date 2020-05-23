@@ -1,17 +1,39 @@
 -module(txt).
 -include_lib("eunit/include/eunit.hrl").
 -export([
-  main/1,
-  main_test/0
+  get_file_contents/1,
+  format_fills_lines_with_a_given_length_test/0,
+  format/2
 ]).
 
-main_test() ->
-  main("text.txt").
+test_format(MaxLineLength) ->
+  %% Setup
+  Text = get_file_string("text.txt"),
+  %% Excersice
+  FormattedLines = format(Text, MaxLineLength),
+  lists:foldr(fun (Line, Acc) -> length(Line) + Acc end, 0, FormattedLines),
+  %% Assertions
+  assertLinesLength(FormattedLines, MaxLineLength).
 
-main(FileName) ->
+format_fills_lines_with_a_given_length_test() ->
+  test_format(35),
+  test_format(20),
+  test_format(10),
+  test_format(69),
+  ?assertThrow({error, "lala"}, test_format(9)),
+  ?assertThrow({error, _}, test_format(5)),
+  ?assertThrow({error, _}, test_format(0)).
+
+assertLinesLength([], _) -> void;
+assertLinesLength([Line|Lines], MaxLineLength) when length(Line) =< MaxLineLength ->
+  ?assert(length(Line) =< MaxLineLength),
+  assertLinesLength(Lines, MaxLineLength);
+assertLinesLength(_,_) -> throw({error, "lala"}).
+
+
+get_file_string(FileName) ->
   Lines = get_file_contents(FileName),
-  Text = lists:foldr(fun (Line, Acc) -> Line ++ Acc end, "", Lines),
-  format(Text, 35).
+  lists:foldr(fun (Line, Acc) -> Line ++ Acc end, "", Lines).
 
 % Get the contents of a text file into a list of lines.
 % Each line has its trailing newline removed.
@@ -34,21 +56,24 @@ get_all_lines(File,Partial) ->
 
 format(Text, N) ->
   [FirstWord|Words] = string:tokens(Text, [$\s,$\n]),
-  {_,_,FormattedText} = lists:foldl(
+  AppendWord =
     fun (Word, {LengthPerLine, RemainingLength, Acc}) ->
-      case length(Word) =< RemainingLength of
+      WordLength = length(Word),
+      case WordLength =< RemainingLength of
         true  -> {
           LengthPerLine,
-          RemainingLength - length(Word) - 1,
+          RemainingLength - WordLength - 1,
           add_space(Acc) ++ Word
         };
         false -> {
           LengthPerLine,
-          LengthPerLine - length(Word) - 1,
+          LengthPerLine - WordLength - 1,
           break_line(Acc) ++ Word
         }
       end
     end,
+  {_,_,FormattedText} = lists:foldl(
+    AppendWord,
     {N, N-length(FirstWord)-1, FirstWord},
     Words
   ),
@@ -58,13 +83,3 @@ format(Text, N) ->
 break_line(Text) -> Text ++ "\n".
 
 add_space(Text) -> Text ++ "\s".
-
-% "TheheatbloomedinDecemberasthe\ncarnivalseasonkickedintogear.Nearly\nhelplesswithsunandglare,Iavoided\nRio'sbrilliantsidewalksand\nglitteringbeaches,pantingindark\ncornersandwaitingouttheinverted\nsouthernsummer."
-
-% ["The heat bloomed in December as th",
-%  "carnival season kicked into gear",
-%  "Nearly helpless with sun and glare",
-%  "I avoided Rio's brilliant sidewalk",
-%  "and glittering beaches, panting i",
-%  "dark corners and waiting out th",
-%  "inverted southern summer."]
