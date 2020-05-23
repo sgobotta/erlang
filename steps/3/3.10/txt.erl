@@ -3,8 +3,16 @@
 -export([
   get_file_contents/1,
   format_fills_lines_with_a_given_length_test/0,
-  format/2
+  format/2,
+  main/0
 ]).
+
+main() ->
+  FormattedText = format(get_file_string("text.txt"), 35),
+  io:format("~s", [print_text(FormattedText, "")]).
+
+print_text([], Text) -> Text;
+print_text([X|Xs], Text) -> print_text(Xs, break_line(Text ++ X)).
 
 test_format(MaxLineLength) ->
   %% Setup
