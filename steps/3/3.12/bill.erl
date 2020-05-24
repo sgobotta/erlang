@@ -108,7 +108,7 @@ get_total_price_test() ->
 %% @doc Given a list of tuples representing items, a line length and an
 %% accumulator, returns a string representing the formatted line bills for each
 %% item, with their names and prices.
-print_items([], N, Accumulator) ->
+print_items([], _N, Accumulator) ->
   Accumulator;
 print_items([Item|Items], N, Accumulator) ->
   print_items(Items, N, Accumulator ++ print_item(Item, N) ++ [$\n]).
@@ -166,7 +166,7 @@ print_item_test() ->
   ).
 
 %% @doc Given an integer and a character, returns a string with N characters C.
-fill(0, C) -> [];
+fill(0, _C) -> [];
 fill(N, C) -> C ++ fill(N-1, C).
 
 fill_test() ->
@@ -196,7 +196,7 @@ format_price_test() ->
 %% @doc Given a list of characters and an integer, returns a string representing
 %% a float number.
 string_to_float_string([], 0) -> ".0";
-string_to_float_string([], N) -> "0.0";
+string_to_float_string([], _N) -> "0.0";
 string_to_float_string(Cs, 0) -> "." ++ Cs;
 string_to_float_string([C|Cs], N) -> [C | string_to_float_string(Cs, N-1)].
 
