@@ -24,13 +24,12 @@ test_format(MaxLineLength) ->
   assertLinesLength(FormattedLines, MaxLineLength).
 
 format_fills_lines_with_a_given_length_test() ->
-  test_format(35),
+  test_format(19),
   test_format(20),
-  test_format(10),
   test_format(69),
-  ?assertThrow({error}, test_format(9)),
-  ?assertThrow({error}, test_format(5)),
-  ?assertThrow({error}, test_format(0)).
+  test_format(100),
+  test_format(120),
+  test_format(250).
 
 assertLinesLength([], _) -> void;
 assertLinesLength([Line|Lines], MaxLineLength) when length(Line) =< MaxLineLength ->
@@ -65,29 +64,71 @@ get_all_lines(File,Partial) ->
 format(Text, N) ->
   [FirstWord|Words] = string:tokens(Text, [$\s,$\n]),
   AppendWord =
-    fun (Word, {LengthPerLine, RemainingLength, Acc}) ->
+    fun (Word, {LengthPerLine, RemainingLength, CurrentLine, Acc}) ->
       WordLength = length(Word),
       case WordLength =< RemainingLength of
-        true  -> {
-          LengthPerLine,
-          RemainingLength - WordLength - 1,
-          add_space(Acc) ++ Word
-        };
-        false -> {
-          LengthPerLine,
-          LengthPerLine - WordLength - 1,
-          break_line(Acc) ++ Word
-        }
+        true ->
+          {
+            LengthPerLine,
+            RemainingLength - WordLength - 1,
+            add_space(CurrentLine) ++ Word,
+            Acc
+          };
+        false ->
+          CurrentFormattedLine = break_line(
+            fill_with_spaces(CurrentLine, LengthPerLine - length(CurrentLine))
+          ),
+          {
+            LengthPerLine,
+            LengthPerLine - WordLength - 1,
+            Word,
+            Acc ++ CurrentFormattedLine
+          }
       end
     end,
-  {_,_,FormattedText} = lists:foldl(
+  {_,_,Leftover,FormattedText} = lists:foldl(
     AppendWord,
-    {N, N-length(FirstWord)-1, FirstWord},
+    {N, N-length(FirstWord)-1, FirstWord, ""},
     Words
   ),
-  FilledLines = string:tokens(FormattedText, [$\n]),
+  FilledLines = string:tokens(FormattedText ++ Leftover, [$\n]),
   FilledLines.
 
 break_line(Text) -> Text ++ "\n".
 
-add_space(Text) -> Text ++ "\s".
+add_space(Text) -> Text ++ [$\s].
+
+%% @doc Given a string and an integer, adds as many spaces as specified by N to
+%% return a new formatted string.
+fill_with_spaces(Text, 0) -> Text;
+fill_with_spaces(Text, N) ->
+  FormattedText = fill_with_spaces(Text, N, ""),
+  FormattedText.
+
+%% @doc Given a string, an integer and an accumulator, adds as many spaces as
+%% specified by N, to return an accumulator with a formatted string.
+fill_with_spaces(Xs, 0, Acc) -> Acc ++ Xs;
+fill_with_spaces([], N, Acc) -> fill_with_spaces(Acc, N, "");
+fill_with_spaces([X|Xs], N, Acc) ->
+    case [X] == [$\s] of
+      true  -> fill_with_spaces(Xs, N-1, Acc ++ [X,X]);
+      false -> fill_with_spaces(Xs, N, Acc ++ [X])
+    end.
+
+fill_with_spaces_test() ->
+  ?assertEqual(
+    "Monsters  around  my  neck",
+    fill_with_spaces("Monsters  around  my  neck", 0)
+  ),
+  ?assertEqual(
+    "Monsters  around  my neck",
+    fill_with_spaces("Monsters around my neck", 2)
+  ),
+  ?assertEqual(
+    "Monsters  around  my  neck",
+    fill_with_spaces("Monsters around my neck", 3)
+  ),
+  ?assertEqual(
+    "Monsters   around  my  neck",
+    fill_with_spaces("Monsters around my neck", 4)
+  ).
