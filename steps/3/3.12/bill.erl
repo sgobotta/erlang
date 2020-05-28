@@ -9,7 +9,7 @@
 -type item()              :: {item_code(), item_name(), item_price()}.
 -type item_maybe()        :: nothing | {just, item()}.
 -type item_quantity()     :: {item_code(), integer()}.
--type barcodes()           :: [item_code()].
+-type barcodes()          :: [item_code()].
 -type discount()          :: quantity_discount.
 -type quantity_discount() :: {item_code(), integer(), item_price()}.
 
