@@ -1,6 +1,6 @@
 -module(bill).
 -author("@sgobotta").
--export([barcode/0, main/1]).
+-export([barcodes/0, main/1]).
 -include_lib("eunit/include/eunit.hrl").
 
 -type item_code()         :: integer().
@@ -9,14 +9,14 @@
 -type item()              :: {item_code(), item_name(), item_price()}.
 -type item_maybe()        :: nothing | {just, item()}.
 -type item_quantity()     :: {item_code(), integer()}.
--type barcode()           :: [item_code()].
+-type barcodes()           :: [item_code()].
 -type discount()          :: quantity_discount.
 -type quantity_discount() :: {item_code(), integer(), item_price()}.
 
 -type quantity_discount_maybe() :: nothing | {just, quantity_discount() }.
 
 main(Barcode) ->
-  io:format("~s~n", [scan_barcode(Barcode)]).
+  io:format("~s~n", [scan_barcodes(Barcode)]).
 
 %% @doc Simple database example
 -spec db() -> [item()].
@@ -38,21 +38,21 @@ quantity_discounts_db() -> [
   {1234, 2, -100}
 ].
 
-%% @doc An example of a barcode, which represents a list of item codes.
--spec barcode() -> [item_code()].
-barcode() -> [1234,4719,3814,1112,1113,1234].
+%% @doc An example of barcodes, which represents a list of item codes.
+-spec barcodes() -> [item_code()].
+barcodes() -> [1234,4719,3814,1112,1113,1234].
 
-%% @doc Given a list of item_code() representing a barcode, returns a string
+%% @doc Given a list of item_code() representing barcodes, returns a string
 %% representing a supermarket bill, with a title, a list of items with their
 %% name and prices and the total price.
-scan_barcode(Codes) ->
+scan_barcodes(Codes) ->
   DiscountItems = get_discounts_by_category(get_discount_categories(), Codes),
   Items = get_items(Codes, db()),
   TotalPrice = get_total_price(Items ++ DiscountItems),
   TotalPriceItem = {0, "Total", TotalPrice},
   print({Items ++ DiscountItems, TotalPriceItem}).
 
-scan_barcode_test() ->
+scan_barcodes_test() ->
   % Setup
   ExpectedBill =
     "        Erlang Stores\n" ++
@@ -65,22 +65,22 @@ scan_barcode_test() ->
     "Discount.................-1.00\n" ++
     "\n" ++
     "Total....................12.90",
-  Bill = scan_barcode(barcode()),
+  Bill = scan_barcodes(barcodes()),
   ?assertEqual(ExpectedBill, Bill).
 
 get_discount_categories() ->
   [quantity_discount].
 
-%% @doc Given a list of discount category and a barcode() returns a list of
+%% @doc Given a list of discount category and a barcodes() returns a list of
 %% item() representing the available discounts.
--spec get_discounts_by_category([discount()], barcode()) -> [item()].
+-spec get_discounts_by_category([discount()], barcodes()) -> [item()].
 get_discounts_by_category([], _ItemCodes) -> [];
 get_discounts_by_category([Category | Categories], ItemCodes) ->
   AvailableDiscounts = get_discounts({Category, ItemCodes}),
   lists:flatten([AvailableDiscounts | get_discounts_by_category(Categories, ItemCodes)]).
 
 get_discounts_by_category_test() ->
-  Barcode = barcode(),
+  Barcode = barcodes(),
   DiscountCategories = get_discount_categories(),
   ExpectsASingleDiscount = [serialize_discount({1234, 2, -100})],
   ?assertEqual(
@@ -93,9 +93,9 @@ get_discounts_by_category_test() ->
     get_discounts_by_category(DiscountCategories, Barcode ++ Barcode)
   ).
 
-%% @doc Given a discount type and a barcode() returns a list of item() that
-%% represent the available discounts for the given items in a barcode.
--spec get_discounts({discount(), barcode()}) -> [item()].
+%% @doc Given a discount type and a barcodes() returns a list of item() that
+%% represent the available discounts for the given items in barcodes.
+-spec get_discounts({discount(), barcodes()}) -> [item()].
 get_discounts({quantity_discount, ItemCodes}) ->
   SortedCodes = lists:sort(ItemCodes),
   ItemQuantities = get_item_quantities(SortedCodes, []),
@@ -121,7 +121,7 @@ get_item_quantities([Code | _Codes] = CodeList, Acc) ->
 
 get_item_quantities_test() ->
   % Setup
-  Codes = lists:sort(barcode()),
+  Codes = lists:sort(barcodes()),
   ExpectedResult = [{1112, 1}, {1113, 1}, {1234, 2}, {3814, 1}, {4719, 1}],
   % Exercise and Assertions
   ?assertEqual(ExpectedResult, get_item_quantities(Codes, [])),
@@ -166,21 +166,6 @@ take_occurrences_test() ->
     {[], [1112, 1113, 1234, 1234, 1234, 3814, 4719]},
     take_occurrences(4200, [1112, 1113, 1234, 1234, 1234, 3814, 4719], {[], []})
   ).
-
-remove_duplicates([]) -> [];
-remove_duplicates(Xs) -> remove_duplicates(Xs, []).
-
-remove_duplicates([], Acc) -> Acc;
-remove_duplicates([{Code,_,_} = X | Xs], Acc) ->
-  case is_item_member(Code, Acc) of
-    true  -> remove_duplicates(Xs, Acc);
-    false -> remove_duplicates(Xs, Acc ++ [X])
-  end.
-
-remove_duplicates_test() ->
-  Items = get_items(barcode(), db()),
-  ItemsSet = remove_duplicates(Items),
-  ?assertEqual(init(Items), ItemsSet).
 
 %% @doc Given a list of item_quantity() and a list of quantity_discount(),
 %%  returns a list of quantity_discount().
@@ -236,18 +221,6 @@ from_quantity_discounts_maybe_test() ->
     from_quantity_discounts_maybe(DiscountsMaybeList)
   ),
   ?assertEqual([], from_quantity_discounts_maybe(EmptyDiscountsMaybeList)).
-
-% -spec has_discount(item_code(), [quantity_discount()]) -> boolean().
-% has_discount(Code, DiscountsData) ->
-%   is_item_member(Code, DiscountsData).
-
-% has_discount_test() ->
-%   %% Setup
-%   FishFingersItem = hd(db()),
-%   DrySherryItem = lists:last(db()),
-%   %% Exercise and Assertions
-%   ?assert(has_discount(DrySherryItem, quantity_discounts_db())),
-%   ?assertNot(has_discount(FishFingersItem, quantity_discounts_db())).
 
 -spec is_item_member(item_code(), [quantity_discount]) -> boolean().
 is_item_member(_Code, []) -> false;
@@ -314,7 +287,7 @@ print({Items, Total}) ->
 
 print_test() ->
   % Setup
-  Items = get_items(barcode(), db()),
+  Items = get_items(barcodes(), db()),
   TotalPrice = get_total_price(Items),
   TotalPriceItem = {0, "Total", TotalPrice},
   ExpectedBill =
@@ -357,7 +330,7 @@ get_total_price([{_,_,Price}|Items]) -> Price + get_total_price(Items).
 
 get_total_price_test() ->
   % Setup
-  Items = get_items(barcode(), db()),
+  Items = get_items(barcodes(), db()),
   % Exercise
   ?assertEqual(0, get_total_price([])),
   ?assertEqual(540, get_total_price([hd(Items)])),
@@ -374,7 +347,7 @@ print_items([Item|Items], N, Accumulator) ->
 
 print_items_test() ->
   % Setup
-  Items = get_items(barcode(), db()),
+  Items = get_items(barcodes(), db()),
   ExpectedText =
   "Dry Sherry, 1lt...........5.40\n" ++
   "Fish Fingers..............1.21\n" ++
@@ -496,12 +469,8 @@ from_items_maybe_test() ->
   ?assertEqual([FishFingers], from_items_maybe([JustFish], [])).
 
 get_items_maybe([], _Items) -> [];
-get_items_maybe([Code | Codes] = Cs, Items) ->
+get_items_maybe([Code | Codes], Items) ->
   [get_item_maybe(Code, Items) | get_items_maybe(Codes, Items)].
-
-%% @doc Given an integer representing an item code, returns a list of
-%% item_maybe().
-get_item_maybe(Code) -> get_item_maybe(Code, db()).
 
 %% @doc Given an integer representing an item code and a dummy database of
 %% item_maybe(), returns a an item_maybe().
@@ -514,10 +483,11 @@ get_item_maybe(Code, [{_AnotherCode, _Name, _Price} | Items]) ->
   get_item_maybe(Code, Items).
 
 get_item_maybe_test() ->
-  ?assertEqual(nothing, get_item_maybe(420)),
-  ?assertEqual({just, {4719, "Fish Fingers" , 121}}, get_item_maybe(4719)),
-  ?assertEqual({just, {3814, "Orange Jelly", 56}}, get_item_maybe(3814)),
-  ?assertEqual({just, {1234, "Dry Sherry, 1lt", 540}}, get_item_maybe(1234)).
+  Db = db(),
+  ?assertEqual(nothing, get_item_maybe(420, Db)),
+  ?assertEqual({just, {4719, "Fish Fingers" , 121}}, get_item_maybe(4719, Db)),
+  ?assertEqual({just, {3814, "Orange Jelly", 56}}, get_item_maybe(3814, Db)),
+  ?assertEqual({just, {1234, "Dry Sherry, 1lt", 540}}, get_item_maybe(1234, Db)).
 
 init([_X|[]]) -> [];
 init([X|Xs]) -> [X | init(Xs)].
