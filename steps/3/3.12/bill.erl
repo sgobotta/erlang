@@ -7,6 +7,7 @@
 -type item_name()         :: string().
 -type item_price()        :: integer().
 -type item()              :: {item_code(), item_name(), item_price()}.
+-type item_maybe()        :: nothing | {just, item()}.
 -type item_quantity()     :: {item_code(), integer()}.
 -type barcode()           :: [item_code()].
 -type discount()          :: quantity_discount.
@@ -60,10 +61,10 @@ scan_barcode_test() ->
     "Fish Fingers..............1.21\n" ++
     "Orange Jelly..............0.56\n" ++
     "Hula Hoops (Giant)........1.33\n" ++
-    "Unknown Item..............0.00\n" ++
     "Dry Sherry, 1lt...........5.40\n" ++
+    "Discount.................-1.00\n" ++
     "\n" ++
-    "Total....................13.90",
+    "Total....................12.90",
   Bill = scan_barcode(barcode()),
   ?assertEqual(ExpectedBill, Bill).
 
@@ -185,7 +186,7 @@ remove_duplicates_test() ->
 %%  returns a list of quantity_discount().
 -spec get_discounts_by_quantity([item_quantity()], [quantity_discount()]) -> [item()].
 get_discounts_by_quantity([], _DiscountsData) -> [];
-get_discounts_by_quantity([{Code, _Quantity} = Item | Items], DiscountsData) ->
+get_discounts_by_quantity([{_Code, _Quantity} = Item | Items], DiscountsData) ->
   ItemQuantityDiscounts = from_quantity_discounts_maybe(
     get_quantity_discounts_maybe(Item, lists:flatten(DiscountsData))
   ),
@@ -323,7 +324,6 @@ print_test() ->
     "Fish Fingers..............1.21\n" ++
     "Orange Jelly..............0.56\n" ++
     "Hula Hoops (Giant)........1.33\n" ++
-    "Unknown Item..............0.00\n" ++
     "Dry Sherry, 1lt...........5.40\n" ++
     "\n" ++
     "Total....................13.90",
@@ -380,7 +380,6 @@ print_items_test() ->
   "Fish Fingers..............1.21\n" ++
   "Orange Jelly..............0.56\n" ++
   "Hula Hoops (Giant)........1.33\n" ++
-  "Unknown Item..............0.00\n" ++
   "Dry Sherry, 1lt...........5.40\n",
   % Exercise and Assertion
   ?assertEqual(ExpectedText, print_items(Items, 30, "")).
@@ -416,8 +415,8 @@ print_item_test() ->
     print_item({1112, "Hula Hoops (Giant)", 133}, 30)
   ),
   ?assertEqual(
-    "Unknown Item..............0.00",
-    print_item({0, "Unknown Item", 0}, 30)
+    "Discount..................0.00",
+    print_item({0, "Discount", 0}, 30)
   ),
   ?assertEqual(
     "Total....................13.90",
@@ -466,42 +465,59 @@ string_to_float_string_test() ->
 
 %% @doc Given a list of integer representing codes, returns an array of tuples
 %% representing items from the dummy database.
+-spec get_items([item_code()], [item()]) -> [item()].
 get_items([], _Db) -> [];
-get_items([Code | Codes], Db) -> [get_item(Code, Db) | get_items(Codes, Db)].
+get_items(Codes, Db) ->
+  ItemsMaybe = get_items_maybe(Codes, Db),
+  from_items_maybe(ItemsMaybe, []).
 
 get_items_test() ->
   ?assertEqual([], get_items([], [])),
   ?assertEqual(
-    [{0, "Unknown Item", 0}, {1234, "Dry Sherry, 1lt", 540}],
+    [{1234, "Dry Sherry, 1lt", 540}],
     get_items([0000,1234], db())
   ),
   ?assertEqual(
     [
-      {0, "Unknown Item", 0},
       {1234, "Dry Sherry, 1lt", 540},
       {4719, "Fish Fingers" , 121}
     ],
     get_items([0000,1234,4719], db())
   ).
 
-%% @doc Given an integer representing an item code, returns a tuple representing
-%% an item from the dummy database.
-get_item(Code) -> get_item(Code, db()).
+-spec from_items_maybe([item_maybe()], [item()]) -> [item()].
+from_items_maybe([], Items) -> Items;
+from_items_maybe([nothing | ItemsMaybe], Items) -> from_items_maybe(ItemsMaybe, Items);
+from_items_maybe([{just, Item} | ItemsMaybe], Items) -> from_items_maybe(ItemsMaybe, Items ++ [Item]).
 
-%% @doc Given an integer representing an item code and a dummy database, returns
-%% a tuple representing an item from the database.
-get_item(_Code, []) ->
-  {0, "Unknown Item", 0};
-get_item(Code, [{Code, _Name, _Price} = Item | _Items]) ->
-  Item;
-get_item(Code, [{_AnotherCode, _Name, _Price} | Items]) ->
-  get_item(Code, Items).
+from_items_maybe_test() ->
+  FishFingers = hd(db()),
+  JustFish = {just, FishFingers},
+  ?assertEqual([FishFingers], from_items_maybe([JustFish], [])).
 
-get_item_test() ->
-  ?assertEqual({0, "Unknown Item", 0}, get_item(420)),
-  ?assertEqual({4719, "Fish Fingers" , 121}, get_item(4719)),
-  ?assertEqual({3814, "Orange Jelly", 56}, get_item(3814)),
-  ?assertEqual({1234, "Dry Sherry, 1lt", 540}, get_item(1234)).
+get_items_maybe([], _Items) -> [];
+get_items_maybe([Code | Codes] = Cs, Items) ->
+  [get_item_maybe(Code, Items) | get_items_maybe(Codes, Items)].
+
+%% @doc Given an integer representing an item code, returns a list of
+%% item_maybe().
+get_item_maybe(Code) -> get_item_maybe(Code, db()).
+
+%% @doc Given an integer representing an item code and a dummy database of
+%% item_maybe(), returns a an item_maybe().
+-spec get_item_maybe(integer(), [item()]) -> item_maybe().
+get_item_maybe(_Code, []) ->
+  nothing;
+get_item_maybe(Code, [{Code, _Name, _Price} = Item | _Items]) ->
+  {just, Item};
+get_item_maybe(Code, [{_AnotherCode, _Name, _Price} | Items]) ->
+  get_item_maybe(Code, Items).
+
+get_item_maybe_test() ->
+  ?assertEqual(nothing, get_item_maybe(420)),
+  ?assertEqual({just, {4719, "Fish Fingers" , 121}}, get_item_maybe(4719)),
+  ?assertEqual({just, {3814, "Orange Jelly", 56}}, get_item_maybe(3814)),
+  ?assertEqual({just, {1234, "Dry Sherry, 1lt", 540}}, get_item_maybe(1234)).
 
 init([_X|[]]) -> [];
 init([X|Xs]) -> [X | init(Xs)].
