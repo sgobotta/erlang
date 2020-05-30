@@ -38,4 +38,4 @@ iterate(N) ->
 	fun (F) -> (iterate(N-1))(F) end.
 
 iterate_test() ->
-	?assertEqual(6, ((iterate(3))(add(2)))(0)).
+	?assertEqual(6, ((iterate(3))(add(2)))(2)).

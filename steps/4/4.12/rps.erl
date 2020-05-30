@@ -7,7 +7,7 @@
 %
 
 play_two(StrategyL,StrategyR,N) ->
-    play_two(StrategyL,StrategyR,[],[],N).
+  play_two(StrategyL,StrategyR,[],[],N).
 
 % tail recursive loop for play_two/3
 % 0 case computes the result of the tournament
@@ -16,34 +16,34 @@ play_two(StrategyL,StrategyR,N) ->
 % REPLACE THE dummy DEFINITIONS
 
 play_two(_,_,PlaysL,PlaysR,0) ->
-   dummy;
+  dummy;
 
 play_two(StrategyL,StrategyR,PlaysL,PlaysR,N) ->
-   dummy.
+  dummy.
 
 %
 % interactively play against a strategy, provided as argument.
 %
 
 play(Strategy) ->
-    io:format("Rock - paper - scissors~n"),
-    io:format("Play one of rock, paper, scissors, ...~n"),
-    io:format("... r, p, s, stop, followed by '.'~n"),
-    play(Strategy,[]).
+  io:format("Rock - paper - scissors~n"),
+  io:format("Play one of rock, paper, scissors, ...~n"),
+  io:format("... r, p, s, stop, followed by '.'~n"),
+  play(Strategy,[]).
 
 % tail recursive loop for play/1
 
 play(Strategy,Moves) ->
-    {ok,P} = io:read("Play: "),
-    Play = expand(P),
-    case Play of
-	stop ->
-	    io:format("Stopped~n");
-	_    ->
-	    Result = result(Play,Strategy(Moves)),
-	    io:format("Result: ~p~n",[Result]),
-	    play(Strategy,[Play|Moves])
-    end.
+  {ok,P} = io:read("Play: "),
+  Play = expand(P),
+  case Play of
+    stop ->
+      io:format("Stopped~n");
+    _    ->
+      Result = result(Play,Strategy(Moves)),
+      io:format("Result: ~p~n",[Result]),
+      play(Strategy,[Play|Moves])
+  end.
 
 %
 % auxiliary functions
@@ -71,9 +71,9 @@ result(scissors,scissors) -> draw.
 % result of a tournament
 
 tournament(PlaysL,PlaysR) ->
-    lists:sum(
-      lists:map(fun outcome/1,
-		lists:zipwith(fun result/2,PlaysL,PlaysR))).
+  lists:sum(
+    lists:map(fun outcome/1,
+      lists:zipwith(fun result/2,PlaysL,PlaysR))).
 
 outcome(win)  ->  1;
 outcome(lose) -> -1;
@@ -82,38 +82,38 @@ outcome(draw) ->  0.
 % transform 0, 1, 2 to rock, paper, scissors and vice versa.
 
 enum(0) ->
-    rock;
+  rock;
 enum(1) ->
-    paper;
+  paper;
 enum(2) ->
-    scissors.
+  scissors.
 
 val(rock) ->
-    0;
+  0;
 val(paper) ->
-    1;
+  1;
 val(scissors) ->
-    2.
+  2.
 
 % give the play which the argument beats.
 
 beats(rock) ->
-    scissors;
+  scissors;
 beats(paper) ->
-    rock;
+  rock;
 beats(scissors) ->
-    paper.
+  paper.
 
 %
 % strategies.
 %
 echo([]) ->
-     paper;
+  paper;
 echo([Last|_]) ->
-    Last.
+  Last.
 
 rock(_) ->
-    rock.
+  rock.
 
 
 
@@ -121,15 +121,15 @@ rock(_) ->
 % REPLACE THE dummy DEFINITIONS
 
 no_repeat([]) ->
-    dummy;
+  dummy;
 no_repeat([X|_]) ->
-    dummy.
+  dummy.
 
 const(Play) ->
-    dummy.
+  dummy.
 
 cycle(Xs) ->
-    dummy.
+  dummy.
 
 rand(_) ->
-    dummy.
+  dummy.
