@@ -60,7 +60,6 @@ product_test() ->
 %% where you can see that the elements from the longer list are lost.
 %%
 -spec zip([A], [B]) -> [{A,B}].
-zip([], [])         -> [];
 zip(_, [])          -> [];
 zip([], _)          -> [];
 zip([X|Xs], [Y|Ys]) -> [{X,Y} | zip(Xs, Ys)].
@@ -81,7 +80,6 @@ zip_generic_test(ZipFunction) ->
 %% zip_with(fun(X,Y) -> X+Y end, [1,3,5,7], [2,4]) = [ 3, 7 ]
 %%
 -spec zip_with(fun((A,B) -> C), [A], [B]) -> [C].
-zip_with(_F, [], [])        -> [];
 zip_with(_F, _Xs, [])       -> [];
 zip_with(_F, [], _Ys)       -> [];
 zip_with(F, [X|Xs], [Y|Ys]) -> [F(X,Y) | zip_with(F, Xs, Ys)].
