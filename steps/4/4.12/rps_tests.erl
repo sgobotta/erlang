@@ -19,16 +19,14 @@ cycle_test() ->
   ?assertEqual(scissors, rps:cycle([dummy, dummy, dummy, dummy, dummy])).
 
 least_frequent_test() ->
-  ?assertEqual(rock, rps:least_frequent([rock])),
-  ?assertEqual(rock, rps:least_frequent([rock,paper,paper,scissors,scissors])),
-  ?assertEqual(rock, rps:least_frequent([paper,rock,paper,scissors,scissors])),
-  ?assertEqual(rock, rps:least_frequent([paper,paper,rock,scissors,scissors])),
-  ?assertEqual(rock, rps:least_frequent([scissors,paper,paper,rock,scissors])),
-  ?assertEqual(rock, rps:least_frequent([scissors,paper,paper,scissors,rock])).
+  ?assertEqual(scissors, rps:least_frequent([rock,paper,paper,scissors,scissors])),
+  ?assertEqual(scissors, rps:least_frequent([paper,rock,paper,scissors,scissors])),
+  ?assertEqual(scissors, rps:least_frequent([paper,paper,rock,scissors,scissors])),
+  ?assertEqual(scissors, rps:least_frequent([scissors,paper,paper,rock,scissors])),
+  ?assertEqual(scissors, rps:least_frequent([scissors,paper,paper,scissors,rock])).
 
 most_frequent_test() ->
-  ?assertEqual(rock, rps:most_frequent([rock])),
-  ?assertEqual(rock, rps:most_frequent([rock,rock,paper,rock,scissors])),
-  ?assertEqual(rock, rps:most_frequent([rock,paper,rock,scissors,rock])),
-  ?assertEqual(rock, rps:most_frequent([paper,paper,rock,rock,rock])),
-  ?assertEqual(rock, rps:most_frequent([rock,rock,rock,scissors,scissors])).
+  ?assertEqual(paper, rps:most_frequent([rock,rock,paper,rock,scissors])),
+  ?assertEqual(paper, rps:most_frequent([rock,paper,rock,scissors,rock])),
+  ?assertEqual(paper, rps:most_frequent([paper,paper,rock,rock,rock])),
+  ?assertEqual(paper, rps:most_frequent([rock,rock,rock,scissors,scissors])).

@@ -1,7 +1,7 @@
 -module(utils).
 -author("santiago@camba.coop").
 -include_lib("eunit/include/eunit.hrl").
--export([least_frequents/1, most_frequents/1]).
+-export([least_frequents/1, most_frequents/1,take/2]).
 
 least_frequents(Xs) -> modes(Xs, fun minimum/1).
 
@@ -74,3 +74,19 @@ minimum([X|Xs]) -> minimum(Xs, X).
 
 minimum([], Max) -> Max;
 minimum([X|Xs], Max) -> minimum(Xs, min(Max, X)).
+
+%% @doc Given a number of elements and a list, returns a list with the first N
+%% elements.
+take(0,_Xs) ->
+    [];
+take(_N,[]) ->
+    [];
+take(N,[X|Xs]) when N>0 ->
+    [X|take(N-1,Xs)].
+
+take_test() ->
+  ?assertEqual([],      take(0, [1,2,3])),
+  ?assertEqual([1],     take(1, [1,2,3])),
+  ?assertEqual([1,2],   take(2, [1,2,3])),
+  ?assertEqual([1,2,3], take(3, [1,2,3])),
+  ?assertEqual([1,2,3], take(4, [1,2,3])).
