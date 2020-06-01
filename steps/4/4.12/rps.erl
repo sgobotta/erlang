@@ -201,25 +201,24 @@ modes(Xs,Mode,ChoosePlay) ->
 
 %% @doc Given a non empty list of strategy returns a function that given a list
 %% of plays chooses a strategy randomly.
-random_strategy(Strategies) ->
-  fun (Xs) -> 
-    (lists:nth(rand:uniform(length(Strategies)), Strategies))(Xs)
-  end.
+random_strategy(OpponentMoves) ->
+  Strategies = maps:to_list(get_strategies()),
+  {_, Strategy} = lists:nth(rand:uniform(length(Strategies)), Strategies),
+  Strategy(OpponentMoves).
 
 %% @doc Given a list of strategies, returns a function that takes a list of
 %% moves to return the best scored strategy.
-best_scored(Strategies) ->
-  fun (OpponentMoves) ->
-    [StrategiesResultHead | StrategiesResultTail] = lists:map(
-      fun (StrategyName) ->
-        get_strategy_score(StrategyName, OpponentMoves)
-      end,
-      Strategies
-    ),
-    {BestScoredStrategy, _Score} = get_best_scored_strategy(StrategiesResultTail, StrategiesResultHead),
-    BestScoredStrategy = maps:get(BestScoredStrategy, maps:from_list(Strategies)),
-    BestScoredStrategy(OpponentMoves)
-  end.
+best_scored(OpponentMoves) ->
+  Strategies = maps:to_list(get_strategies()),
+  [StrategiesResultHead | StrategiesResultTail] = lists:map(
+    fun (StrategyName) ->
+      get_strategy_score(StrategyName, OpponentMoves)
+    end,
+    Strategies
+  ),
+  {BestScoredStrategyName, _Score} = get_best_scored_strategy(StrategiesResultTail, StrategiesResultHead),
+  BestScoredStrategy = maps:get(BestScoredStrategyName, maps:from_list(Strategies)),
+  BestScoredStrategy(OpponentMoves).
 
 best_scored_test() ->
   % Setup
