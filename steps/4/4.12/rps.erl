@@ -4,7 +4,7 @@
 -export([
   play/1, play_two/3, val/1,tournament/2,const/1,enum/1,get_strategies/0,
   no_repeat/1,rock/1,cycle/1,rand/1,echo/1,least_frequent/1,most_frequent/1,
-  random_strategy/1
+  random_strategy/1, best_scored/1
 ]).
 -import(utils, [least_frequents/1,most_frequents/1,take/2]).
 
@@ -14,15 +14,37 @@
 
 %% @doc Plays one strategy against another, for N moves.
 play_two(StrategyL,StrategyR,N) ->
-  play_two(StrategyL,StrategyR,[],[],N).
+  io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
+  io:format("Rock - Paper - Scissors~n"),
+  io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
+  io:format("~n"),
+  io:format("~p Rounds will be played.~n~n", [N]),
+  play_two(StrategyL,StrategyR,[],[],N,1).
 
 %% @doc Tail recursive loop for play_two/3
 %% 0 case computes the result of the tournament
-play_two(_,_,PlaysL,PlaysR,0) ->
-  dummy;
-
-play_two(StrategyL,StrategyR,PlaysL,PlaysR,N) ->
-  dummy.
+play_two(_,_,PlaysL,PlaysR,0,_RoundN) ->
+  io:format("~nResult:~n"),
+  case tournament(PlaysL, PlaysR) of
+    0 -> io:format("It's a draw game.~n");
+    _ ->
+      Score = tournament(PlaysL, PlaysR),
+      case Score > 0 of
+        true -> io:format("Player L wins!~n");
+        false -> io:format("Player R wins!~n")
+      end
+    end,
+  io:format("~nEnd of game.~n");
+play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
+  PlayL = StrategyL(PlaysR),
+  PlayR = StrategyR(PlaysL),
+  io:format("Round ~p :: PlayerL plays ~ts and PlayerR plays ~ts. ", [RoundN, get_unicode(PlayL), get_unicode(PlayR)]),
+  case result(PlayL, PlayR) of
+    draw -> io:format("Draw, nobody scores.~n");
+    win  -> io:format("PlayerL scores!~n");
+    lose -> io:format("PlayerR scores!~n")
+  end,
+  play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1).
 
 %% @doc Interactively play against a strategy, provided as argument.
 play(Strategy) ->
@@ -195,7 +217,8 @@ best_scored(Strategies) ->
       Strategies
     ),
     {BestScoredStrategy, _Score} = get_best_scored_strategy(StrategiesResultTail, StrategiesResultHead),
-    maps:get(BestScoredStrategy, maps:from_list(Strategies))
+    BestScoredStrategy = maps:get(BestScoredStrategy, maps:from_list(Strategies)),
+    BestScoredStrategy(OpponentMoves)
   end.
 
 best_scored_test() ->
@@ -280,3 +303,9 @@ test_strategy_using_most_frequent_strategy_test() ->
     % computed by the strategy.
     utils:take(5, test_strategy(fun most_frequent/1, OpponentMoves))
   ).
+
+%% Auxiliary printing chars
+
+get_unicode(rock) -> "💎";
+get_unicode(paper) -> "📜";
+get_unicode(scissors) -> "✂".
