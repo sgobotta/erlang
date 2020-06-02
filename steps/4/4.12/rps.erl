@@ -11,11 +11,11 @@
 -type play()           :: rock | paper | scissors.
 -type outcome()        :: win | lose | draw.
 -type strategy()       :: function().
--type strategy_name()  :: {rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy, best_scored, function()}.
--type strategy_score() :: {rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy, best_scored, integer()}.
+-type strategy_name()  :: rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored.
+-type strategy_score() :: {rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored, integer()}.
 
 %% @doc Plays one strategy against another, for N moves.
--spec play_two(function(), function(), integer()) -> ok.
+-spec play_two(strategy(), strategy(), integer()) -> ok.
 play_two(StrategyL,StrategyR,N) ->
   io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
   io:format("Rock - Paper - Scissors~n"),
@@ -26,19 +26,9 @@ play_two(StrategyL,StrategyR,N) ->
 
 %% @doc Tail recursive loop for play_two/3
 %% 0 case computes the result of the tournament
--spec play_two(function(), function(), [play()], [play()], integer(), integer()) -> ok.
-play_two(_,_,PlaysL,PlaysR,0,RoundN) ->
-  io:format("~nResult:~n"),
-  case tournament(PlaysL, PlaysR) of
-    0 -> io:format("It's a draw game.~n");
-    _ ->
-      Score = tournament(PlaysL, PlaysR),
-      case Score > 0 of
-        true -> io:format("Player L wins!~n");
-        false -> io:format("Player R wins!~n")
-      end
-    end,
-  io:format("~nEnd of game.~n");
+-spec play_two(strategy(), strategy(), [play()], [play()], integer(), integer()) -> ok.
+play_two(_,_,PlaysL,PlaysR,0,_RoundN) ->
+  print_overall_result(PlaysL, PlaysR);
 play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
   PlayL = StrategyL(PlaysR),
   PlayR = StrategyR(PlaysL),
@@ -50,26 +40,44 @@ play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
   end,
   play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1).
 
+%% @doc Given a list of PlayerL moves and a list of PlayerR moves, prints out
+%% the overall result.
+-spec print_overall_result([play()], [play()]) -> ok.
+print_overall_result(PlaysL, PlaysR) ->
+  io:format("~nResult:~n"),
+    case tournament(PlaysL, PlaysR) of
+      0 -> io:format("It's a draw game.~n");
+      _ ->
+        Score = tournament(PlaysL, PlaysR),
+        case Score > 0 of
+          true -> io:format("Player L wins!~n");
+          false -> io:format("Player R wins!~n")
+        end
+      end,
+    io:format("~nEnd of game.~n").
+
 %% @doc Interactively play against a strategy, provided as argument.
--spec play(function()) -> ok.
+-spec play(strategy()) -> ok.
 play(Strategy) ->
   io:format("Rock - paper - scissors~n"),
   io:format("Play one of rock, paper, scissors, ...~n"),
   io:format("... r, p, s, stop, followed by '.'~n"),
-  play(Strategy,[]).
+  play(Strategy,[],[]).
 
 %% @doc Tail recursive loop for play/1
--spec play(function(), [play()]) -> ok.
-play(Strategy,Moves) ->
+-spec play(strategy(), [play()], [play()]) -> ok.
+play(Strategy,Moves,OpponentMoves) ->
   {ok,P} = io:read("Play: "),
   Play = expand(P),
   case Play of
     stop ->
-      io:format("Stopped~n");
+      io:format("Stopped~n"),
+      print_overall_result(Moves, OpponentMoves);
     _    ->
-      Result = result(Play,Strategy(Moves)),
+      OpponentMove = Strategy(Moves),
+      Result = result(Play,OpponentMove),
       io:format("Result: ~p~n",[Result]),
-      play(Strategy,[Play|Moves])
+      play(Strategy,[Play|Moves],[OpponentMove|OpponentMoves])
   end.
 
 %
@@ -182,7 +190,7 @@ no_repeat([]) ->
 no_repeat([X|_]) ->
   beats(X).
 
-const(Play) ->
+const(_Play) ->
   dummy.
 
 %% @doc Given a list of moves returns a move acoording to the number of moves.
@@ -211,7 +219,7 @@ most_frequent(Xs) ->
 %% @doc Generic function used by most_frequent/1 and least_frequent/1 functions.
 %% Given a list of moves, a function that finds the most frequent or least
 %% frequent move and a beats/1 or loose/1 function returns a suitable play.
--spec modes([play()], function(), function()) -> play().
+-spec modes([play()], function(), strategy()) -> play().
 modes([],_,_) ->
   rand([]);
 modes(Xs,Mode,ChoosePlay) ->
@@ -231,7 +239,7 @@ random_strategy(OpponentMoves) ->
 
 %% @doc Given a list of strategies, returns a function that takes a list of
 %% moves to return a move according to the best scored strategy.
--spec best_scored([play()]) -> function().
+-spec best_scored([play()]) -> strategy().
 best_scored(Strategies) ->
   fun (OpponentMoves) ->
     [StrategiesResultHead | StrategiesResultTail] = lists:map(
@@ -249,7 +257,7 @@ best_scored(Strategies) ->
 -spec get_best_scored_strategy([strategy_score()], strategy_score()) -> strategy_score().
 get_best_scored_strategy([], Best) ->
   Best;
-get_best_scored_strategy([{StrategyName, Score} = S |Xs], {BestStrategy, BestScore} = B) ->
+get_best_scored_strategy([{_StrategyName, Score} = S |Xs], {_BestStrategy, BestScore} = B) ->
   case Score > BestScore of
     true  -> get_best_scored_strategy(Xs, S);
     false -> get_best_scored_strategy(Xs, B)
@@ -262,7 +270,7 @@ get_best_scored_strategy_test() ->
 
 %% @doc Given a strategy name with it's function and a list of moves, returns a
 %% score.
--spec get_strategy_score(strategy_name(), [play()]) -> strategy_score().
+-spec get_strategy_score({strategy_name(), strategy()}, [play()]) -> strategy_score().
 get_strategy_score({StrategyName, StrategyFunction}, OpponentMoves) ->
   StrategyResults = test_strategy(StrategyFunction, OpponentMoves),
   {StrategyName, tournament(StrategyResults, OpponentMoves)}.
@@ -276,7 +284,7 @@ get_strategy_score_test() ->
 
 %% @doc Given a strategy and a list of moves, returns a list of moves played by
 %% the strategy.
--spec test_strategy(function(), [play()]) -> [play()].
+-spec test_strategy(strategy(), [play()]) -> [play()].
 test_strategy(Strategy, Xs) ->
   test_strategy(Strategy, lists:reverse(Xs), [], []).
 
@@ -285,8 +293,8 @@ test_strategy(Strategy, Xs) ->
 %% and returns the last accumulator.
 %% The head of the list of moves should be the opponent's first movement,
 %% meaning that in some cases the given list should sometimes be reversed.
--spec test_strategy(function(), [play()], [play()], [play()]) -> [play()].
-test_strategy(Strategy, [], OpponentMoves, Acc) ->
+-spec test_strategy(strategy(), [play()], [play()], [play()]) -> [play()].
+test_strategy(_Strategy, [], _OpponentMoves, Acc) ->
   Acc;
 test_strategy(Strategy, [X|Xs], OpponentMoves, Acc) ->
   test_strategy(Strategy, Xs, [X|OpponentMoves], [Strategy(OpponentMoves) | Acc]).
