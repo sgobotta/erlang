@@ -22,19 +22,24 @@ play_two(StrategyL,StrategyR,N) ->
   io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
   io:format("~n"),
   io:format("~p Rounds will be played.~n~n", [N]),
-  play_two(StrategyL,StrategyR,[],[],N,1).
+  play_two(StrategyL,StrategyR,[],[],N,1,0).
 
-%% @doc Tail recursive loop for play_two/3
-%% 0 case computes the result of the tournament
--spec play_two(strategy(), strategy(), [play()], [play()], integer(), integer()) -> ok.
-play_two(_,_,PlaysL,PlaysR,0,_RoundN) ->
-  print_overall_result(tournament(PlaysL, PlaysR));
-play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
+%% @doc Given two strategies, two list of moves, a maximum number of rounds, a
+%% current round and a score, plays rps using Tail recursive loop for play_two/3.
+-spec play_two(strategy(), strategy(), [play()], [play()], integer(), integer(), integer()) -> ok.
+play_two(_,_,_PlaysL,_PlaysR,0,_RoundN,Score) ->
+  print_overall_result(Score);
+play_two(_StrategyL,_StrategyR,_PlaysL,_PlaysR,N,_RoundN,Score) when ((Score + N) < 0) ->
+  print_overall_result(Score);
+play_two(_StrategyL,_StrategyR,_PlaysL,_PlaysR,N,_RoundN,Score) when ((Score - N) > 0) ->
+  print_overall_result(Score);
+play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN,Score) ->
   PlayL = StrategyL(PlaysR),
   PlayR = StrategyR(PlaysL),
   print_play(PlayL,PlayR,RoundN),
-  print_play_result(result(PlayL,PlayR)),
-  play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1).
+  PlayResult = result(PlayL,PlayR),
+  print_play_result(PlayResult),
+  play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1,Score+outcome(PlayResult)).
 
 %% @doc Interactively play against a strategy, provided as argument.
 -spec play(strategy()) -> ok.
