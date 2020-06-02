@@ -28,7 +28,7 @@ play_two(StrategyL,StrategyR,N) ->
 %% 0 case computes the result of the tournament
 -spec play_two(strategy(), strategy(), [play()], [play()], integer(), integer()) -> ok.
 play_two(_,_,PlaysL,PlaysR,0,_RoundN) ->
-  print_overall_result(PlaysL, PlaysR);
+  print_overall_result(tournament(PlaysL, PlaysR));
 play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
   PlayL = StrategyL(PlaysR),
   PlayR = StrategyR(PlaysL),
@@ -53,7 +53,7 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
   case Play of
     stop ->
       io:format("Stopped~n"),
-      print_overall_result(Moves, OpponentMoves);
+      print_overall_result(tournament(Moves, OpponentMoves));
     _    ->
       OpponentMove = Strategy(Moves),
       print_play(Play, OpponentMove, RoundN),
@@ -65,15 +65,13 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
 % Print functions
 %
 
-%% @doc Given a list of PlayerL moves and a list of PlayerR moves, prints out
-%% the overall result.
--spec print_overall_result([play()], [play()]) -> ok.
-print_overall_result(PlaysL, PlaysR) ->
+%% @doc Given a score, prints out the overall result.
+-spec print_overall_result(integer()) -> ok.
+print_overall_result(Score) ->
   io:format("~nResult:~n"),
-    case tournament(PlaysL, PlaysR) of
+    case Score of
       0 -> io:format("It's a draw game.~n");
       _ ->
-        Score = tournament(PlaysL, PlaysR),
         case Score > 0 of
           true -> io:format("Player L wins!~n");
           false -> io:format("Player R wins!~n")
