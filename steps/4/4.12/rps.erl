@@ -32,13 +32,38 @@ play_two(_,_,PlaysL,PlaysR,0,_RoundN) ->
 play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN) ->
   PlayL = StrategyL(PlaysR),
   PlayR = StrategyR(PlaysL),
-  io:format("Round ~p :: PlayerL plays ~ts and PlayerR plays ~ts. ", [RoundN, get_unicode(PlayL), get_unicode(PlayR)]),
-  case result(PlayL, PlayR) of
-    draw -> io:format("Draw, nobody scores.~n");
-    win  -> io:format("PlayerL scores!~n");
-    lose -> io:format("PlayerR scores!~n")
-  end,
+  print_play(PlayL,PlayR,RoundN),
+  print_play_result(result(PlayL,PlayR)),
   play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1).
+
+%% @doc Interactively play against a strategy, provided as argument.
+-spec play(strategy()) -> ok.
+play(Strategy) ->
+  io:format("Rock - paper - scissors~n"),
+  io:format("Play one of rock, paper, scissors, ...~n"),
+  io:format("... r, p, s, stop, followed by '.'~n"),
+  play(Strategy,[],[],1).
+
+%% @doc Given a strategy, a list of PlayerL plays, a list of Player plays and
+%% a round number, plays a rps game using a tail recursive loop for play/1.
+-spec play(strategy(), [play()], [play()], integer()) -> ok.
+play(Strategy,Moves,OpponentMoves,RoundN) ->
+  {ok,P} = io:read("Play: "),
+  Play = expand(P),
+  case Play of
+    stop ->
+      io:format("Stopped~n"),
+      print_overall_result(Moves, OpponentMoves);
+    _    ->
+      OpponentMove = Strategy(Moves),
+      print_play(Play, OpponentMove, RoundN),
+      print_play_result(result(Play,OpponentMove)),
+      play(Strategy,[Play|Moves],[OpponentMove|OpponentMoves],RoundN+1)
+  end.
+
+%
+% Print functions
+%
 
 %% @doc Given a list of PlayerL moves and a list of PlayerR moves, prints out
 %% the overall result.
@@ -56,29 +81,24 @@ print_overall_result(PlaysL, PlaysR) ->
       end,
     io:format("~nEnd of game.~n").
 
-%% @doc Interactively play against a strategy, provided as argument.
--spec play(strategy()) -> ok.
-play(Strategy) ->
-  io:format("Rock - paper - scissors~n"),
-  io:format("Play one of rock, paper, scissors, ...~n"),
-  io:format("... r, p, s, stop, followed by '.'~n"),
-  play(Strategy,[],[]).
+-spec print_play(play(), play(), integer()) -> ok.
+print_play(PlayL, PlayR, RoundN) ->
+  Message = "Round ~p :: PlayerL plays ~ts and PlayerR plays ~ts. ",
+  io:format(Message, [RoundN, get_unicode(PlayL), get_unicode(PlayR)]).
 
-%% @doc Tail recursive loop for play/1
--spec play(strategy(), [play()], [play()]) -> ok.
-play(Strategy,Moves,OpponentMoves) ->
-  {ok,P} = io:read("Play: "),
-  Play = expand(P),
-  case Play of
-    stop ->
-      io:format("Stopped~n"),
-      print_overall_result(Moves, OpponentMoves);
-    _    ->
-      OpponentMove = Strategy(Moves),
-      Result = result(Play,OpponentMove),
-      io:format("Result: ~p~n",[Result]),
-      play(Strategy,[Play|Moves],[OpponentMove|OpponentMoves])
-  end.
+-spec print_play_result(outcome()) -> ok.
+print_play_result(draw) ->
+  io:format("Draw, nobody scores.~n");
+print_play_result(win) ->
+  io:format("PlayerL scores!~n");
+print_play_result(lose) ->
+  io:format("PlayerR scores!~n").
+
+%% @doc Given a play() returns a representation character of that play.
+-spec get_unicode(play()) -> string().
+get_unicode(rock) -> "💎";
+get_unicode(paper) -> "📜";
+get_unicode(scissors) -> "✂".
 
 %
 % Auxiliary functions
@@ -331,11 +351,3 @@ test_strategy_using_most_frequent_strategy_test() ->
     % computed by the strategy.
     utils:take(5, test_strategy(fun most_frequent/1, OpponentMoves))
   ).
-
-%% Auxiliary printing chars
-
-%% @doc Given a play() returns a representation character of that play.
--spec get_unicode(play()) -> string().
-get_unicode(rock) -> "💎";
-get_unicode(paper) -> "📜";
-get_unicode(scissors) -> "✂".
