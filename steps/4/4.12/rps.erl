@@ -15,9 +15,11 @@
 -type strategy_name()  :: rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored.
 -type strategy_score() :: {rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored, integer()}.
 
+%% @doc Runs a test game where PlayerL uses a best_scored strategy, a rand
+%% strategy for PlayerR and 420 rounds are played.
 -spec main_test_game() -> ok.
 main_test_game() ->
-  play_two(best_scored(maps:to_list(get_strategies())), fun rand/1, 20).
+  play_two(best_scored(maps:to_list(get_strategies())), fun rand/1, 420).
 
 %% @doc Plays one strategy against another, for N moves.
 -spec play_two(strategy(), strategy(), integer()) -> ok.
@@ -66,7 +68,7 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
       play(Strategy,[Play|Moves],[OpponentMove|OpponentMoves],RoundN+1)
   end.
 
-%% @doc Given a play() returns a representation character of that play.
+%% @doc Given a play() returns a character representation.
 -spec get_unicode(play()) -> string().
 get_unicode(rock) -> "✊";
 get_unicode(paper) -> "✋";
