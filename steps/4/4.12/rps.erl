@@ -4,7 +4,8 @@
 -export([
   play/1, play_two/3, val/1,tournament/2,const/1,enum/1,get_strategies/0,
   no_repeat/1,rock/1,cycle/1,rand/1,echo/1,least_frequent/1,most_frequent/1,
-  random_strategy/1, best_scored/1
+  random_strategy/1, best_scored/1,
+  main_test_game/0
 ]).
 -import(utils, [least_frequents/1,most_frequents/1,take/2]).
 
@@ -14,14 +15,14 @@
 -type strategy_name()  :: rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored.
 -type strategy_score() :: {rock | echo | no_repeat | cycle | rand | echo | least_frequent | most_frequent | random_strategy | best_scored, integer()}.
 
+-spec main_test_game() -> ok.
+main_test_game() ->
+  play_two(best_scored(maps:to_list(get_strategies())), fun rand/1, 20).
+
 %% @doc Plays one strategy against another, for N moves.
 -spec play_two(strategy(), strategy(), integer()) -> ok.
 play_two(StrategyL,StrategyR,N) ->
-  io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
-  io:format("Rock - Paper - Scissors~n"),
-  io:format("*-*-*-*-*-*-*-*-*-*-*-*~n"),
-  io:format("~n"),
-  io:format("~p Rounds will be played.~n~n", [N]),
+  print_play_two_header(integer_to_list(N)),
   play_two(StrategyL,StrategyR,[],[],N,1,0).
 
 %% @doc Given two strategies, two list of moves, a maximum number of rounds, a
@@ -36,14 +37,14 @@ play_two(_StrategyL,_StrategyR,_PlaysL,_PlaysR,N,_RoundN,Score) when ((Score - N
 play_two(StrategyL,StrategyR,PlaysL,PlaysR,N,RoundN,Score) ->
   PlayL = StrategyL(PlaysR),
   PlayR = StrategyR(PlaysL),
-  print_play(PlayL,PlayR,RoundN),
   PlayResult = result(PlayL,PlayR),
-  print_play_result(PlayResult),
+  print_play(PlayL,PlayR,RoundN,print_play_result(PlayResult)),
   play_two(StrategyL, StrategyR, [PlayL|PlaysL], [PlayR|PlaysR], N-1, RoundN+1,Score+outcome(PlayResult)).
 
 %% @doc Interactively play against a strategy, provided as argument.
 -spec play(strategy()) -> ok.
 play(Strategy) ->
+  print_play_header(),
   io:format("Rock - paper - scissors~n"),
   io:format("Play one of rock, paper, scissors, ...~n"),
   io:format("... r, p, s, stop, followed by '.'~n"),
@@ -57,12 +58,11 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
   Play = expand(P),
   case Play of
     stop ->
-      io:format("Stopped~n"),
+      io:format("Stopped~n~n"),
       print_overall_result(tournament(Moves, OpponentMoves));
     _    ->
       OpponentMove = Strategy(Moves),
-      print_play(Play, OpponentMove, RoundN),
-      print_play_result(result(Play,OpponentMove)),
+      print_play(Play, OpponentMove, RoundN, print_play_result(result(Play,OpponentMove))),
       play(Strategy,[Play|Moves],[OpponentMove|OpponentMoves],RoundN+1)
   end.
 
@@ -70,38 +70,79 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
 % Print functions
 %
 
+-spec wrap_text(string(), integer(), atom()) -> [string()].
+wrap_text(Text, CellLength, Alignment) ->
+  ["║", string:pad(Text, CellLength, Alignment), "║"].
+
+-spec print_row([string()], integer(), string(), string(), string()) -> [string()].
+print_row(Cells, N, FirstChar, ColumnSeparator, LastChar) ->
+  print_row(Cells, N, FirstChar, ColumnSeparator, LastChar, "").
+
+-spec print_row([string()], integer(), string(), string(), string(), [string()]) -> [string()].
+print_row([X|[]],N,FirstChar,_ColumnSeparator,LastChar,Acc) ->
+  [FirstChar, Acc, string:pad(X, N, both), LastChar];
+print_row([X|Xs],N,FirstChar,ColumnSeparator,Lastchar, Acc) ->
+  print_row(Xs, N, FirstChar, ColumnSeparator, Lastchar, Acc ++ string:pad(X, N, both) ++ ColumnSeparator).
+
+-spec print_play_header() -> ok.
+print_play_header() ->
+  StartHeader       = ["╔", lists:duplicate(91, "═"), "╗\n"],
+  Title             = [wrap_text("Rock, Paper, Scissors", 91, both), "\n"],
+  Hint              = [wrap_text("Play one of rock, paper, scissors typing: r, p, s, stop, followed by '.'", 91, both), "\n"],
+  BlankLine         = [wrap_text("", 91, trailing), "\n"],
+  EndHeader         = ["╚", lists:duplicate(91, "═"), "╝\n"],
+  io:format("~ts", [[StartHeader, Title, BlankLine, Hint, BlankLine, EndHeader]]).
+
+-spec print_play_two_header(integer()) -> ok.
+print_play_two_header(RoundsNumber) ->
+  StartTable        = ["╔", lists:duplicate(91, "═"), "╗\n"],
+  Title             = [wrap_text("Rock, Paper, Scissors", 91, both), "\n"],
+  BlankLine         = [wrap_text("", 91, trailing), "\n"],
+  Rounds            = [wrap_text([RoundsNumber, " Rounds will be played."], 91, both), "\n"],
+  HeaderSDecoration = [print_row(lists:duplicate(4, lists:flatten(lists:duplicate(22, "═"))), 22, "╠", "╦", "╣"), "\n"],
+  HeaderEDecoration = [print_row(lists:duplicate(4, lists:flatten(lists:duplicate(22, "═"))), 22, "╚", "╩", "╝"), "\n"],
+  HeaderTitles      = ["Round", "PlayerL", "PlayerR", "Round Winner"],
+  Header            = [print_row(HeaderTitles, (88 div 4), "║", "║", "║"), "\n"],
+  io:format("~ts", [[StartTable, Title, BlankLine, Rounds, BlankLine, HeaderSDecoration, Header, HeaderEDecoration]]).
+
 %% @doc Given a score, prints out the overall result.
 -spec print_overall_result(integer()) -> ok.
 print_overall_result(Score) ->
-  io:format("~nResult:~n"),
     case Score of
-      0 -> io:format("It's a draw game.~n");
+      0 -> print_result("It's a draw game.");
       _ ->
         case Score > 0 of
-          true -> io:format("Player L wins!~n");
-          false -> io:format("Player R wins!~n")
+          true -> print_result("Player L wins!");
+          false -> print_result("Player R wins!")
         end
       end,
     io:format("~nEnd of game.~n").
 
--spec print_play(play(), play(), integer()) -> ok.
-print_play(PlayL, PlayR, RoundN) ->
-  Message = "Round ~p :: PlayerL plays ~ts and PlayerR plays ~ts. ",
-  io:format(Message, [RoundN, get_unicode(PlayL), get_unicode(PlayR)]).
+-spec print_play(play(), play(), integer(), string()) -> ok.
+print_play(PlayL, PlayR, RoundN, Result) ->
+  Message = [print_row([integer_to_list(RoundN), get_unicode(PlayL), get_unicode(PlayR), Result], (88 div 4), " ", " ", " "), "\n"],
+  io:format("~ts", [Message]).
 
--spec print_play_result(outcome()) -> ok.
+-spec print_result(string()) -> ok.
+print_result(Text) ->
+  StartTable        = ["╔", lists:duplicate(91, "═"), "╗\n"],
+  Result            = [wrap_text(Text, 91, both), "\n"],
+  EndTable          = ["╚", lists:duplicate(91, "═"), "╝\n"],
+  io:format("~ts", [[StartTable, Result, EndTable, "\n"]]).
+
+-spec print_play_result(outcome()) -> string().
 print_play_result(draw) ->
-  io:format("Draw, nobody scores.~n");
+  "Draw";
 print_play_result(win) ->
-  io:format("PlayerL scores!~n");
+  "PlayerL scores!";
 print_play_result(lose) ->
-  io:format("PlayerR scores!~n").
+  "PlayerR scores!".
 
 %% @doc Given a play() returns a representation character of that play.
 -spec get_unicode(play()) -> string().
-get_unicode(rock) -> "💎";
-get_unicode(paper) -> "📜";
-get_unicode(scissors) -> "✂".
+get_unicode(rock) -> "r ✊";
+get_unicode(paper) -> "p ✋";
+get_unicode(scissors) -> [<<"s ✌"/utf8>>, <<6765/utf8>>].
 
 %
 % Auxiliary functions
