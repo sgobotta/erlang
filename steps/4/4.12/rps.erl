@@ -68,9 +68,9 @@ play(Strategy,Moves,OpponentMoves,RoundN) ->
 
 %% @doc Given a play() returns a representation character of that play.
 -spec get_unicode(play()) -> string().
-get_unicode(rock) -> "r ✊";
-get_unicode(paper) -> "p ✋";
-get_unicode(scissors) -> [<<"s ✌"/utf8>>, <<6765/utf8>>].
+get_unicode(rock) -> "✊";
+get_unicode(paper) -> "✋";
+get_unicode(scissors) -> "🤞".
 
 %
 % Auxiliary functions
