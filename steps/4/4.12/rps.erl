@@ -2,7 +2,7 @@
 -author("sgobotta").
 -include_lib("eunit/include/eunit.hrl").
 -export([
-  play/1, play_two/3, val/1,tournament/2,const/1,enum/1,get_strategies/0,
+  play/1, play_two/3, val/1,tournament/2,const/2,enum/1,get_strategies/0,
   no_repeat/1,rock/1,cycle/1,rand/1,echo/1,least_frequent/1,most_frequent/1,
   random_strategy/1, best_scored/1,
   main_test_game/0
@@ -184,8 +184,8 @@ no_repeat([]) ->
 no_repeat([X|_]) ->
   beats(X).
 
-const(_Play) ->
-  dummy.
+const(Play, _) ->
+  Play.
 
 %% @doc Given a list of moves returns a move acoording to the number of moves.
 %% played so far.
