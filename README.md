@@ -1,8 +1,10 @@
-# Erlang - Futurelearn
+# Erlang
 
 > May, 2020
 
-## Repository for the FutureLearn Erlang course notes
+## Repository for Erlang course notes
+
+This Repository contains information about Erlang course steps from Futurelearn well as some Erlang Master Classes content.
 
 > **keywords**
 >
