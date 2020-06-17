@@ -5,7 +5,8 @@
   compile/1, run/3,
   parse/1,
   simplify/1,
-  expr2/0
+  expr2/0,
+  env/0
 ]).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -20,6 +21,9 @@ expr2() ->
   {add,{mul,{num,1},{var,b}},
        {mul,{add,{mul,{num,2},{var,b}},{mul,{num,1},{var,b}}},
             {num,0}}}.
+
+env() ->
+  [{b,2}].
 
 %% Pretty printing
 

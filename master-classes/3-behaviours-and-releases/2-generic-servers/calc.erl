@@ -16,19 +16,21 @@ eval(Expr) ->
 stop() ->
   gen_server:cast(?MODULE, stop).
 
-handle_call({eval, Expr}, _From, Env) ->
-  {reply, expr:eval(Env, Expr), Env}.
-
-handle_cast({print, Expr}, Env) ->
-  Str = expr:print(Expr),
-  io:format("~s~n", [Str]),
-  {noreply, Env};
-handle_cast(stop, Env) ->
-  {stop, normal, Env}.
-
 init(Env) ->
   io:format("Starting...~n"),
   {ok, Env}.
 
 terminate(_Reason, _Env) ->
   io:format("Terminating...~n").
+
+%% Synchronous call
+handle_call({eval, Expr}, _From, Env) ->
+  {reply, expr:eval(Env, Expr), Env}.
+
+%% Asyncronous calls
+handle_cast({print, Expr}, Env) ->
+  Str = expr:print(Expr),
+  io:format("~s~n", [Str]),
+  {noreply, Env};
+handle_cast(stop, Env) ->
+  {stop, normal, Env}.
