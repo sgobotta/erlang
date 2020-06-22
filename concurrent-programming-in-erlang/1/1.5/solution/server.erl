@@ -83,9 +83,9 @@ start_proxy(N) ->
 %% @doc Starts N servers to return a tuple where the first component is the
 %% proxy pid and the second component the list of spawned server pids.
 start_proxy(0, Servers) ->
-	{spawn(server, proxy, [Servers]), Servers};
+	{spawn(?MODULE, proxy, [Servers]), Servers};
 start_proxy(N, Servers) ->
-	Server = spawn(server, server, []),
+	Server = spawn(?MODULE, server, []),
 	io:format("Starting... ~p~n", [Server]),
 	start_proxy(N-1, [Server | Servers]).
 
