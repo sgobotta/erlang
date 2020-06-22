@@ -1,14 +1,14 @@
 -module(server).
 -author("Santiago Botta <santiago@camba.coop>").
--export([server/1]).
+-export([server/0]).
 
-server(Pid) ->
+server() ->
 	receive
-		{check, String} ->
+		{check, String, Pid} ->
 			case palin:palindrome(String) of
 				true  -> Pid ! {result, String ++ " is a palindrome."};
-				false -> Pid ! {result, String ++ " is not a palindrome."},
-				server(Pid)
-			end;
+				false -> Pid ! {result, String ++ " is not a palindrome."}
+			end,
+			server();
 		_Message -> ok
 	end.
