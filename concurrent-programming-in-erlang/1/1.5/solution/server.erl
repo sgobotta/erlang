@@ -11,14 +11,14 @@
 %% ServerPid ! {check, "MadamImAdam"}.
 %% flush().
 server(From) ->
-	receive
-		{check, String} ->
-			IsPalindromeResult = is_palindrome(String),
-			From ! {result, String ++ IsPalindromeResult},
-			server(From);
-		_Message ->
-			ok
-	end.
+  receive
+    {check, String} ->
+      IsPalindromeResult = is_palindrome(String),
+      From ! {result, String ++ IsPalindromeResult},
+      server(From);
+    _Message ->
+      ok
+  end.
 
 %% @doc Takes requests from multiple clients
 %% Usage:
@@ -26,15 +26,15 @@ server(From) ->
 %% ServerPid ! {check, "MadamImAdam", self()}.
 %% flush().
 server() ->
-	receive
-		{check, String, From} ->
-			io:format("~p ::: processing request from pid: ~p~n", [self(),From]),
-			IsPalindromeResult = is_palindrome(String),
-			From ! {result, String ++ IsPalindromeResult},
-			server();
-		_Message ->
-			ok
-	end.
+  receive
+    {check, String, From} ->
+      io:format("~p ::: processing request from pid: ~p~n", [self(),From]),
+      IsPalindromeResult = is_palindrome(String),
+      From ! {result, String ++ IsPalindromeResult},
+      server();
+    _Message ->
+      ok
+  end.
 
 %% Replicating the server
 
@@ -47,29 +47,29 @@ server() ->
 %% Server3 = spawn(server, server, []).
 %% Proxy   = spawn(server, proxy, [[Server1, Server2, Server3]]).
 proxy(Servers) ->
-	proxy(Servers, Servers).
+  proxy(Servers, Servers).
 
 %% @doc Given a list of server pids and a pid accumulator listens to requests
 %% and delegates future requests to the next pid in the servers list indefinately.
 proxy([], Servers) ->
-	proxy(Servers, Servers);
+  proxy(Servers, Servers);
 proxy([S|Svrs], Servers) ->
-	receive
-		stop ->
-			stop_servers(Servers),
-			ok;
-		Message ->
-			S ! Message,
-			proxy(Svrs, Servers)
-	end.
+  receive
+    stop ->
+      stop_servers(Servers),
+      ok;
+    Message ->
+      S ! Message,
+      proxy(Svrs, Servers)
+  end.
 
 %% @doc Given a list of servers, sends a stop message to each one.
 stop_servers([]) ->
-	ok;
+  ok;
 stop_servers([S|Svrs]) ->
-	io:format("Terminating ~p...~n", [S]),
-	S ! stop,
-	stop_servers(Svrs).
+  io:format("Terminating ~p...~n", [S]),
+  S ! stop,
+  stop_servers(Svrs).
 
 %%%-------------------------------------------------------------------
 %% @doc server module auxiliary functions
@@ -78,24 +78,24 @@ stop_servers([S|Svrs]) ->
 
 %% @doc Given an integer, spawns a proxy server with N servers as argument.
 start_proxy(N) ->
-	start_proxy(N, []).
+  start_proxy(N, []).
 
 %% @doc Starts N servers to return a tuple where the first component is the
 %% proxy pid and the second component the list of spawned server pids.
 start_proxy(0, Servers) ->
-	{spawn(?MODULE, proxy, [Servers]), Servers};
+  {spawn(?MODULE, proxy, [Servers]), Servers};
 start_proxy(N, Servers) ->
-	Server = spawn(?MODULE, server, []),
-	io:format("Starting... ~p~n", [Server]),
-	start_proxy(N-1, [Server | Servers]).
+  Server = spawn(?MODULE, server, []),
+  io:format("Starting... ~p~n", [Server]),
+  start_proxy(N-1, [Server | Servers]).
 
 %% @doc Given a server pid, a client pid and a number of requests, sends N
 %% similar requests to the server pid.
 send_multiple_requests(_ServerPid, _From, 0) ->
-	ok;
+  ok;
 send_multiple_requests(ServerPid, From, N) ->
-	ServerPid ! {check, "Madam Im Adam", From},
-	send_multiple_requests(ServerPid, From, N-1).
+  ServerPid ! {check, "Madam Im Adam", From},
+  send_multiple_requests(ServerPid, From, N-1).
 
 %%%-------------------------------------------------------------------
 %% @doc Palindrome Auxiliary functions
@@ -105,14 +105,14 @@ send_multiple_requests(ServerPid, From, N) ->
 %% @doc Given a string, returns a string telling whether it's a palindrome or not.
 -spec is_palindrome(string()) -> string().
 is_palindrome(String) ->
-	IsPalindrome = palin:palindrome(String),
-	case IsPalindrome of
-		true  -> " is a palindrome.";
-		false -> " is not a palindrome."
-	end.
+  IsPalindrome = palin:palindrome(String),
+  case IsPalindrome of
+    true  -> " is a palindrome.";
+    false -> " is not a palindrome."
+  end.
 
 is_palindrome_test() ->
-	IsPalindrome = " is a palindrome.",
-	IsNotPalindrome = " is not a palindrome.",
-	?assertEqual(IsPalindrome, is_palindrome("Madam I'm Adam")),
-	?assertEqual(IsNotPalindrome, is_palindrome("Madam I'm Adams")).
+  IsPalindrome = " is a palindrome.",
+  IsNotPalindrome = " is not a palindrome.",
+  ?assertEqual(IsPalindrome, is_palindrome("Madam I'm Adam")),
+  ?assertEqual(IsNotPalindrome, is_palindrome("Madam I'm Adams")).
