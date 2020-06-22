@@ -1,15 +1,21 @@
 -module(client).
 -author("Santiago Botta <santiago@camba.coop>").
--export([client/1]).
+-export([start/1]).
 
-client(ServerPid) ->
+%% @doc Given a server id, receives requests to be forwarded to the given server.
+%% Usage:
+%% ServerPid = spawn(server, server, []).
+%% Client = spawn(client, start, [ServerPid].
+%% Client ! {send, {check, "Madam Im Adam"}, self()}.
+%% flush().
+start(ServerPid) ->
   receive
     {send, {check, String}, Pid} ->
       ServerPid ! {check, String, self()},
       receive
         Response -> Pid ! Response
       end,
-      client(ServerPid);
+      start(ServerPid);
     {exit, Pid} ->
       io:format("Exiting client...~n"),
       Pid ! ok
