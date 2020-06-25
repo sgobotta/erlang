@@ -150,7 +150,7 @@ check(Server, String) ->
 send_multiple_requests(_ServerPid, _From, 0) ->
   ok;
 send_multiple_requests(ServerPid, From, N) ->
-  ServerPid ! {check, "Madam Im Adam", From},
+  From ! check(ServerPid, "Madam Im Adam"),
   send_multiple_requests(ServerPid, From, N-1).
 
 %%%-------------------------------------------------------------------
