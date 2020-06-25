@@ -2,7 +2,9 @@
 -author("Santiago Botta <santiago@camba.coop>").
 -include_lib("eunit/include/eunit.hrl").
 -export([server/0, server/1, proxy/1]).
--export([start_proxy/1, send_multiple_requests/3, stop_servers/1]).
+-export([start/1, check/2, stop/1]).
+% Testing purpose
+-export([send_multiple_requests/3]).
 
 %% @doc Given a process id, listens to palindrome requests to return a processed
 %% result.
@@ -56,7 +58,13 @@ proxy([], Servers) ->
 proxy([S|Svrs], Servers) ->
   receive
     stop ->
-      stop_servers(Servers),
+      lists:foreach(
+        fun (Server) ->
+          Server ! stop,
+          io:format("Terminating ~p...~n", [Server])
+        end,
+        Servers
+      ),
       ok;
     Message ->
       S ! Message,
@@ -64,33 +72,39 @@ proxy([S|Svrs], Servers) ->
   end.
 
 %% @doc Given a list of servers, sends a stop message to each one.
-stop_servers([]) ->
-  ok;
-stop_servers([S|Svrs]) ->
-  io:format("Terminating ~p...~n", [S]),
-  S ! stop,
-  stop_servers(Svrs).
+stop(Server) ->
+  io:format("Terminating ~p...~n", [Server]),
+  Server ! stop.
 
 %%%-------------------------------------------------------------------
-%% @doc server module auxiliary functions
+%% @doc server API
 %% @end
 %%%-------------------------------------------------------------------
 
 %% @doc Given an integer, spawns a proxy server with N servers as argument.
-start_proxy(N) ->
-  start_proxy(N, []).
+start(N) ->
+  start(N, []).
 
 %% @doc Starts N servers to return a tuple where the first component is the
-%% proxy pid and the second component the list of spawned server pids.
-start_proxy(0, Servers) ->
-  {spawn(?MODULE, proxy, [Servers]), Servers};
-start_proxy(N, Servers) ->
+%%      proxy pid and the second component the list of spawned server pids.
+start(0, Servers) ->
+  spawn(?MODULE, proxy, [Servers]);
+start(N, Servers) ->
   Server = spawn(?MODULE, server, []),
   io:format("Starting... ~p~n", [Server]),
-  start_proxy(N-1, [Server | Servers]).
+  start(N-1, [Server | Servers]).
+
+%% @doc Given a server pid() and a string sends a request to the server to
+%%      return an evaluated expression for a palindrome query.
+-spec check(pid(), string()) -> {{atom(), string()}}.
+check(Server, String) ->
+  Server ! {check, self(), String},
+  receive
+    Response -> Response
+  end.
 
 %% @doc Given a server pid, a client pid and a number of requests, sends N
-%% similar requests to the server pid.
+%%      similar requests to the server pid.
 send_multiple_requests(_ServerPid, _From, 0) ->
   ok;
 send_multiple_requests(ServerPid, From, N) ->
