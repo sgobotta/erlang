@@ -30,11 +30,11 @@ server(From) ->
 server() ->
   receive
     {check, String, From} ->
-      io:format("~p ::: processing request from pid: ~p~n", [self(),From]),
       IsPalindromeResult = is_palindrome(String),
+      io:format("~p ::: checks palindrome ~s from: ~p~n", [self(), String, From]),
       From ! {result, String ++ IsPalindromeResult},
       server();
-    _Message ->
+    stop ->
       ok
   end.
 
@@ -66,15 +66,16 @@ proxy([S|Svrs], Servers) ->
         Servers
       ),
       ok;
-    Message ->
-      S ! Message,
+    {check, String, From} ->
+      S ! {check, String, From},
       proxy(Svrs, Servers)
   end.
 
 %% @doc Given a list of servers, sends a stop message to each one.
 stop(Server) ->
   io:format("Terminating ~p...~n", [Server]),
-  Server ! stop.
+  Server ! stop,
+  ok.
 
 %%%-------------------------------------------------------------------
 %% @doc server API
@@ -98,7 +99,7 @@ start(N, Servers) ->
 %%      return an evaluated expression for a palindrome query.
 -spec check(pid(), string()) -> {{atom(), string()}}.
 check(Server, String) ->
-  Server ! {check, self(), String},
+  Server ! {check, String, self()},
   receive
     Response -> Response
   end.
