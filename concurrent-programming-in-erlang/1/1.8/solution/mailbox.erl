@@ -1,27 +1,39 @@
 -module(mailbox).
 -author("Santiago Botta <santiago@camba.coop>").
--export([start/0]).
+-include_lib("eunit/include/eunit.hrl").
+-export([start/0, mailbox/1]).
+-export([test_bed/0]).
+
+test_bed() ->
+  MailboxPid = mailbox:start(),
+  MailboxPid ! "Handle me!".
+
 
 %% @doc Starts a mailbox process
+%% @end
 start() ->
-  start([]).
+  io:format("Initialising mailbox...~n"),
+  spawn(?MODULE, mailbox, [[]]).
 
-%% @doc Given an array of messages, processes them in order of appearance .
--spec start([any()]) -> any().
-start([]) ->
+%% @doc Given an array of messages, processes them in order of appearance.
+%% @end
+-spec mailbox([any()]) -> any().
+mailbox([]) ->
   receive
-    FirstMessage ->
-      io:format("Processing... ~p~n", [FirstMessage]),
-      {ok, FirstMessage},
-      start([])
+    {Pid, FirstRequest} ->
+      io:format("Processing... ~p~n", [FirstRequest]),
+      Pid ! {ok, FirstRequest},
+      mailbox([])
   end;
-start([X|Xs]) ->
+mailbox([{Pid, Request}|Xs]) ->
   receive
-    X ->
-      io:format("Processing... ~p~n", [X]),
-      {ok, X},
-      start(Xs);
-    Message ->
-      start([X|Xs] ++ [Message])
+    stop ->
+      ok;
+    {Pid, _} ->
+      io:format("Processing... ~p~n", [Request]),
+      {ok, Request},
+      mailbox(Xs);
+    {AnotherPid, AnotherRequest} ->
+      mailbox([Pid|Xs] ++ [AnotherPid, AnotherRequest])
   end.
 
