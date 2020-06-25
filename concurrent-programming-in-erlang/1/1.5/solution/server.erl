@@ -6,27 +6,67 @@
 % Testing purpose
 -export([send_multiple_requests/3]).
 
+%%%-------------------------------------------------------------------
+%% @doc Server tests
+%% @end
+%%%-------------------------------------------------------------------
+
+server_test() ->
+  Assertions = [
+    {"Adam", {result, "Adam is not a palindrome."}},
+    {"Madam Im Adam", {result, "Madam Im Adam is a palindrome."}}
+  ],
+  Proxy = start(4),
+  ok = lists:foreach(
+    fun ({Request, _Response}) ->
+      mock_check_request(self(), Proxy, Request)
+    end,
+    Assertions
+  ),
+  ok = lists:foreach(
+    fun ({Request, Response}) ->
+      ?assertEqual(Response, mock_check_response(Request))
+    end,
+    Assertions
+  ),
+  stop = server:stop(Proxy),
+  ok.
+
+mock_check_request(From, Server, Request) ->
+  spawn(fun () ->
+    Response = server:check(Server, Request),
+    From ! {Request, Response} end
+  ).
+
+mock_check_response(Request) ->
+  receive
+    {Request, Response} ->
+      Response
+  end.
+
 %% @doc Given a process id, listens to palindrome requests to return a processed
-%% result.
-%% Usage:
-%% ServerPid = spawn(server, server, [self()]).
-%% ServerPid ! {check, "MadamImAdam"}.
-%% flush().
+%%      result.
+%%      Usage:
+%%      ServerPid = spawn(server, server, [self()]).
+%%      ServerPid ! {check, "MadamImAdam"}.
+%%      flush().
+%% @end
 server(From) ->
   receive
     {check, String} ->
       IsPalindromeResult = is_palindrome(String),
       From ! {result, String ++ IsPalindromeResult},
       server(From);
-    _Message ->
+    stop ->
       ok
   end.
 
 %% @doc Takes requests from multiple clients
-%% Usage:
-%% ServerPid = spawn(server, server, []).
-%% ServerPid ! {check, "MadamImAdam", self()}.
-%% flush().
+%%      Usage:
+%%      ServerPid = spawn(server, server, []).
+%%      ServerPid ! {check, "MadamImAdam", self()}.
+%%      flush().
+%% @end
 server() ->
   receive
     {check, String, From} ->
@@ -41,18 +81,20 @@ server() ->
 %% Replicating the server
 
 %% @doc Given a list of server pids, calls a function that accepts a request to
-%% one of them and distributes the next requests to the rest of the servers
-%% indefinately.
-%% Usage:
-%% Server1 = spawn(server, server, []).
-%% Server2 = spawn(server, server, []).
-%% Server3 = spawn(server, server, []).
-%% Proxy   = spawn(server, proxy, [[Server1, Server2, Server3]]).
+%%      one of them and distributes the next requests to the rest of the servers
+%%      indefinately.
+%%      Usage:
+%%      Server1 = spawn(server, server, []).
+%%      Server2 = spawn(server, server, []).
+%%      Server3 = spawn(server, server, []).
+%%      Proxy   = spawn(server, proxy, [[Server1, Server2, Server3]]).
+%% @end
 proxy(Servers) ->
   proxy(Servers, Servers).
 
 %% @doc Given a list of server pids and a pid accumulator listens to requests
-%% and delegates future requests to the next pid in the servers list indefinately.
+%%      and delegates future requests to the next pid in the servers list
+%%      indefinately.
 proxy([], Servers) ->
   proxy(Servers, Servers);
 proxy([S|Svrs], Servers) ->
@@ -74,8 +116,7 @@ proxy([S|Svrs], Servers) ->
 %% @doc Given a list of servers, sends a stop message to each one.
 stop(Server) ->
   io:format("Terminating ~p...~n", [Server]),
-  Server ! stop,
-  ok.
+  Server ! stop.
 
 %%%-------------------------------------------------------------------
 %% @doc server API
