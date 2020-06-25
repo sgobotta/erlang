@@ -2,6 +2,8 @@
 -author("Santiago Botta <santiago@camba.coop>").
 -export([start/1]).
 
+%% Obsolete after server refactor
+
 %% @doc Given a server id, receives requests to be forwarded to the given server.
 %% Usage:
 %% ServerPid = spawn(server, server, []).
