@@ -1,0 +1,23 @@
+Cheatsheet
+
+Expr = {add,{var,a},{mul,{num,2},{var,b}}}.
+Expr1 = {add,{var,a},{mul,{num,2},{num,1}}}.
+Env = [{a,23},{b,-12}].
+
+calc:start(Env).
+calc:eval(Expr).
+calc:stop().
+
+calc_sup:start_link(Env).
+exit(whereis(calc), terminate).
+
+catch_calc:eval(Expr).
+calc:stop().
+
+application:start(calc).
+application:stop(calc).
+application:get_all_env(calc).
+
+whereis(calc).
+
+application:which_applications().
