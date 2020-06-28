@@ -14,19 +14,19 @@ At first I'd have to get in the erlang shell and:
 3. and flush the shell process mailbox to receive responses from the server.
 
 ```erlang
-%% Compiles the server
+%%Compiles the server
 1> c(server).
 {ok,server}
-%% Spawns a process and keep a reference of the server's pid.
-%% Note I'm passing the shell pid `self()` as an argument to the server process.
+% Spawns a process and keep a reference of the server's pid.
+% Note I'm passing the shell pid `self()` as an argument to the server process.
 2> ServerPid = spawn(server, server, [self()]).
 <0.98.0>
-%% Send messages to the server process
+% Send messages to the server process
 3> ServerPId ! {check, "madam im adam"}.
 {check,"madam im adam"}
 4> ServerPId ! {check, "madam im not adam"}.
 {check,"madam im not adam"}
-%% Then I flush the shell process mailbox
+% Then I flush the shell process mailbox
 5> flush().
 Shell got {result,"madam im adam is a palindrome."}
 Shell got {result,"madam im not adam is not a palindrome."}
