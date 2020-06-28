@@ -101,6 +101,9 @@ process_seq() ->
 process_message(Message) ->
   io:format("Processing message: ~p~n", [Message]).
 
+%% @doc A simple test bed to send messages and watch them being processed
+%%      in order.
+%% @end
 -spec process_seq_test_bed() -> ok.
 process_seq_test_bed() ->
   Messages = [
