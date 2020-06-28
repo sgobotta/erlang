@@ -8,5 +8,5 @@ All this work was done during the *Concurrent programming using Erlang* [course]
 
 ## Exercises
 
-1. [Palindrome checker process](1/1.5/solution/README)
-2. [Mailboxes: handling messages order](1/1.8/README)
+1. [Palindrome checker process](exs/ex1/README.md)
+2. [Mailboxes: handling messages order](exs/ex2/README)
