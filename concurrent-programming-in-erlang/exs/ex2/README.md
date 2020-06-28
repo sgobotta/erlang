@@ -36,7 +36,7 @@ That's fine, we're receiving the message but, how can we know they're received i
 
 ### Messages sequence
 
-Here's an implementation of a [test bed](mailbox.erl#11) where we declare multiple messages, spawn a process and send them one by one. We can note that after 1 second, a message is processed right after the previous one. We've also sent a `stop` message to terminate the `receiver` process.
+Here's an implementation of a [test bed](mailbox.erl#L11) where we declare multiple messages, spawn a process and send them one by one. We can note that after 1 second, a message is processed right after the previous one. We've also sent a `stop` message to terminate the `receiver` process.
 
 ```erlang
 6> mailbox:test_bed_1().
