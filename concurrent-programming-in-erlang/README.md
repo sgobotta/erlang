@@ -9,4 +9,4 @@ All this work was done during the *Concurrent programming using Erlang* [course]
 ## Exercises
 
 1. [Palindrome checker process](exs/ex1/README.md)
-2. [Mailboxes: handling messages order](exs/ex2/README)
+2. [Mailboxes: handling messages order](exs/ex2/README.md)
