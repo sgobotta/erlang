@@ -10,3 +10,4 @@ All this work was done during the *Concurrent programming using Erlang* [course]
 
 1. [Palindrome checker process](exs/ex1/README.md)
 2. [Mailboxes: handling messages order](exs/ex2/README.md)
+3. [The Frequency Server: process registration and functional interfaces](exs/ex3/README.md)
