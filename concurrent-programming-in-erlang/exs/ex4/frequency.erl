@@ -18,7 +18,7 @@ start() ->
     spawn(?MODULE, init, [])).
 
 init() ->
-  process_flag(trap_exit, true),    %%% ADDED
+  process_flag(trap_exit, true),
   Frequencies = {get_frequencies(), []},
   loop(Frequencies).
 
@@ -39,7 +39,7 @@ loop(Frequencies) ->
       loop(NewFrequencies);
     {request, Pid, stop} ->
       Pid ! {reply, stopped};
-    {'EXIT', Pid, _Reason} ->                   %%% CLAUSE ADDED
+    {'EXIT', Pid, _Reason} ->
       NewFrequencies = exited(Frequencies, Pid), 
       loop(NewFrequencies)
   end.
@@ -70,19 +70,25 @@ stop() ->
 %% The Internal Help Functions used to allocate and
 %% deallocate frequencies.
 
-allocate({[], Allocated}, _Pid) ->
-  {{[], Allocated}, {error, no_frequency}};
-allocate({[Freq|Free], Allocated}, Pid) ->
-  link(Pid),                                               %%% ADDED
+allocate({Freqs, Allocated}, Pid) ->
+  case lists:keymember(Pid, 2, Allocated) of
+    true -> {{Freqs, Allocated}, {error, already_allocated}};
+    false -> do_allocate({Freqs, Allocated}, Pid)
+  end.
+
+do_allocate({[], Allocated}, _Pid) ->
+  {{[], Allocated},  {error, no_frequency}};
+do_allocate({[Freq|Free], Allocated}, Pid) ->
+  link(Pid),
   {{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}}.
 
 deallocate({Free, Allocated}, Freq) ->
-  {value,{Freq,Pid}} = lists:keysearch(Freq,1,Allocated),  %%% ADDED
-  unlink(Pid),                                             %%% ADDED
-  NewAllocated=lists:keydelete(Freq, 1, Allocated),
-  {[Freq|Free],  NewAllocated}.
+  {value,{Freq,Pid}} = lists:keysearch(Freq, 1, Allocated),
+  unlink(Pid),
+  NewAllocated = lists:keydelete(Freq, 1, Allocated),
+  {[Freq|Free], NewAllocated}.
 
-exited({Free, Allocated}, Pid) ->                %%% FUNCTION ADDED
+exited({Free, Allocated}, Pid) ->
   case lists:keysearch(Pid,2,Allocated) of
     {value,{Freq,Pid}} ->
       NewAllocated = lists:keydelete(Freq,1,Allocated),

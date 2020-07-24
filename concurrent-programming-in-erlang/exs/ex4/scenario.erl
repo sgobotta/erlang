@@ -8,8 +8,10 @@
 
 setup() ->
 	frequency:start(),
-	spawn(?MODULE,client,[alice,[]]),
-	spawn(?MODULE,client,[bob,[]]).
+	[spawn(?MODULE, client, [Id, []]) || Id <- names()].
+
+names() ->
+	[alice, bob, charlie, dorothy, emma, freddy, gabriel, hermann, indian, jake, kevin, laura, monica, natalie].
 
 % A client, parametrised by its name (optional, but useful instrumentation),
 % and the list of frequencies currently allocated to that process. Needed
@@ -21,26 +23,50 @@ setup() ->
 %   - add stop commands.
 
 client(Id,Freqs) ->
-	case rand:uniform(2) of
-		1 -> 
-			{ok,Freq} = frequency:allocate(),
-			io:format("Frequency ~w allocated to client ~w.~n", [Freq,Id]),
-			timer:sleep(1000),
-			client(Id,[Freq|Freqs]);
-		2 ->
-			Len = length(Freqs),
-			case Len of 
-				0 -> 
-					io:format("No frequencies to deallocate by client ~w.~n", [Id]),
-					timer:sleep(1000),
-					client(Id,Freqs);  
-				_ -> 
-					Freq = lists:nth(rand:uniform(Len),Freqs),
-					frequency:deallocate(Freq), 
-					io:format("Frequency ~w deallocated by client ~w.~n", [Freq,Id]),
-					timer:sleep(1000),
-					client(Id,lists:delete(Freq,Freqs))
-			end
+	erlang:process_flag(trap_exit, true),
+	loop(Id, Freqs).
+
+loop(Id, Freqs) ->
+	receive
+		{'EXIT', _, _} ->
+			io:format("Frequency server is down. Exit.~n"),
+			% At this point the server is down, thus every api call attempt will fail
+			% The client should stop gracefully
+			ok;
+		stop ->
+			io:format("Client ~w sent a stop signal. Exit.~n", [Id]),
+			ok
+	after 0 ->
+		case rand:uniform(2) of
+			1 -> 
+				case frequency:allocate() of
+					{ok, Freq} ->
+						io:format("Frequency ~w allocated to client ~w.~n", [Freq, Id]),
+						timer:sleep(1000),
+						loop(Id, [Freq|Freqs]);
+					{error, no_frequency} ->
+						io:format("No frequency available for client ~w. Exit.~n", [Id]),
+						exit(no_frequency);
+					{error, already_allocated} ->
+						io:format("Frequency already allocated to client ~w. Continue.~n", [Id]),
+						timer:sleep(1000),
+						loop(Id, Freqs)
+				end;
+			2 ->
+				Len = length(Freqs),
+				case Len of 
+					0 -> 
+						io:format("No frequencies to deallocate by client ~w.~n", [Id]),
+						timer:sleep(1000),
+						loop(Id,Freqs);  
+					_ -> 
+						Freq = lists:nth(rand:uniform(Len),Freqs),
+						frequency:deallocate(Freq), 
+						io:format("Frequency ~w deallocated by client ~w.~n", [Freq,Id]),
+						timer:sleep(1000),
+						loop(Id,lists:delete(Freq,Freqs))
+				end
+		end
 	end.
 
 % for debugging purposes: chooses a random element of a non-empty list.
