@@ -54,3 +54,40 @@ stopped
 ** exception error: bad argument
      in function  frequency:allocate/0 (frequency.erl, line 51)
 ```
+
+## Enhancing the Frequency Server
+
+The server could not always reply with an answer at the time we expect it to. It may happen to be overloaded by a big number of requests made by other clients. We'd like the clients to handle that kind of situation where a server is not answering inmediately. We'd would add timeouts inside the client interfaces so that they're not kept waiting. We'd also clear the current client's mailbox whenever a function of the interface is used. For testing purposes it's useful to print those messages out so that we can verify those messages that have been queued due to server's delay.
+A `set_overload` function was implemented to simulate an overload, where the server simply triggers a `timer:sleep/1` call
+
+```erlang
+Erlang/OTP 22 [erts-10.6] [source] [64-bit] [smp:4:4] [ds:4:4:10] [async-threads:1] [hipe]
+
+Eshell V10.6  (abort with ^G)
+1> cd("concurrent-programming-in-erlang/exs/ex3").
+/home/.../ex3
+ok
+2> c(frequency).
+{ok,frequency}
+3> frequency:start().
+<0.92.0>
+% At this point we're simulating an overload, then the client wouldnt timeout after ?CLIENT_TIMEOUT (3000) milliseconds. Then we'll be ready to send `allocate/0` messages.
+4> frequency:set_overload(10000).
+{error,timeout}
+5> frequency:allocate().
+Cleared delivered message: {ok,0}
+{error,timeout}
+6> frequency:allocate().
+Cleared delivered message: {ok,0}
+{error,timeout}
+7> frequency:allocate().
+% It's possible to note the mailbox being flushed by the previous sent messages
+Cleared Message: {reply,[83,101,114,118,101,114,32,111,118,101,114,108,111,97,100,101,100]}
+Cleared Message: {reply,{ok,10}}
+Cleared Message: {reply,{error,already_allocated}}
+Cleared delivered message: {ok,3}
+{error,already_allocated}
+8> frequency:deallocate(10).
+Cleared delivered message: {ok,0}
+ok
+```
