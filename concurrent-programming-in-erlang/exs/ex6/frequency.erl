@@ -14,18 +14,30 @@
 -define(CLIENT_TIMEOUT, 3000).
 
 test() ->
+  catch exit(whereis(frequency), kill),
+  timer:sleep(100),
+  undefined = whereis(frequency),
+
   %% Starts the server
   frequency:start(),
+
   %% Tries to allocate a frequency
   {ok, Frequency} = frequency:allocate(),
+
   %% When a frequency was already allocated, an error response is returned on
   %% an allocation attempt
   {error, already_allocated} = frequency:allocate(),
-  %% Tries to deallocate a previously allocated frequency
-  ok = frequency:deallocate(Frequency),
+
   %% When an unallocated frequency is attempted to be deallocated an error
-  %% response is returned
-  {error, unallocated_frequency} = frequency:deallocate(1000),
+  %% is thrown
+  try frequency:deallocate(Frequency + 1) of
+    DeallocateResult ->
+      erlang:error({unexpected_result, DeallocateResult})
+  catch
+    error:_M ->
+      ok
+  end,
+
   %% Stops the server
   stopped = frequency:stop(),
   ok.
@@ -50,24 +62,28 @@ get_frequencies() -> [10,11,12,13,14,15].
 
 loop(Frequencies) ->
   receive
-    {request, Pid, allocate} ->
-      {NewFrequencies, Reply} = allocate(Frequencies, Pid),
-      Pid ! {reply, Reply},
-      loop(NewFrequencies);
-    {request, Pid , {deallocate, Freq}} ->
-      try deallocate(Frequencies, Freq) of
-        NewFrequencies -> Pid ! {reply, ok},
+    {request, From, stop} ->
+      handle(stop, From, Frequencies);
+    {request, From, Command} ->
+      try handle(Command, From, Frequencies) of {Result, NewFrequencies} ->
+        From ! {reply, Result},
         loop(NewFrequencies)
       catch
-        throw:unallocated_frequency ->
-          Pid ! {reply, {error, unallocated_frequency}},
+        throw:{Result, NewFrequencies} ->
+          From ! {reply, Result},
+          loop(NewFrequencies);
+        Kind:Error:Stack ->
+          io:format("Server ~p handling ~p: ~p~n\t~p~n", [Kind, Command, Error, Stack]),
           loop(Frequencies)
       end;
-    {request, Pid, stop} ->
-      Pid ! {reply, stopped};
-    {'EXIT', Pid, _Reason} ->
-      NewFrequencies = exited(Frequencies, Pid), 
-      loop(NewFrequencies)
+    {'EXIT', From, _Reason} ->
+      NewFrequencies = exited(Frequencies, From),
+      loop(NewFrequencies);
+    UnknownMessage ->
+      %% If we don't even know what process sent us this thing that we don't want
+      %% we can only log an error and hope for the best...
+      io:format("Unknown message received in Server: ~p~n", [UnknownMessage]),
+      loop(Frequencies)
   end.
 
 %% Functional interface
@@ -99,26 +115,33 @@ stop() ->
 %% The Internal Help Functions used to allocate and
 %% deallocate frequencies.
 
+handle(allocate, From, Frequencies) ->
+  allocate(Frequencies, From);
+handle({deallocate, Freq}, _From, Frequencies) ->
+  deallocate(Frequencies, Freq);
+handle(stop, _From, Frequencies) ->
+  {stopped, Frequencies}.
+
 allocate({Freqs, Allocated}, Pid) ->
   case lists:keymember(Pid, 2, Allocated) of
-    true -> {{Freqs, Allocated}, {error, already_allocated}};
+    true -> {{error, already_allocated}, {Freqs, Allocated}};
     false -> do_allocate({Freqs, Allocated}, Pid)
   end.
 
 do_allocate({[], Allocated}, _Pid) ->
-  {{[], Allocated},  {error, no_frequency}};
+  {{error, no_frequency}, {[], Allocated}};
 do_allocate({[Freq|Free], Allocated}, Pid) ->
   link(Pid),
-  {{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}}.
+  {{ok, Freq}, {Free, [{Freq, Pid}|Allocated]}}.
 
 deallocate({Free, Allocated}, Freq) ->
   case lists:keysearch(Freq, 1, Allocated) of
     false ->
-      throw(unallocated_frequency);
+      erlang:error(unallocated_frequency);
     {value,{Freq,Pid}} ->
       unlink(Pid),
       NewAllocated = lists:keydelete(Freq, 1, Allocated),
-      {[Freq|Free], NewAllocated}
+      {ok, {[Freq|Free], NewAllocated}}
   end.
 
 exited({Free, Allocated}, Pid) ->
@@ -129,5 +152,3 @@ exited({Free, Allocated}, Pid) ->
     false ->
       {Free,Allocated} 
   end.
-
-
